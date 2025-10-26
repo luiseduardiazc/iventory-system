@@ -11,6 +11,10 @@ import (
 
 	"inventory-system/internal/config"
 	"inventory-system/internal/database"
+	"inventory-system/internal/handler"
+	"inventory-system/internal/middleware"
+	"inventory-system/internal/repository"
+	"inventory-system/internal/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,7 +28,7 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	//Initialize database
+	// Initialize database
 	db, err := database.NewDatabaseClient(cfg)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
@@ -38,12 +42,34 @@ func main() {
 	}
 	log.Println("✅ Database migrations applied successfully")
 
-	// Crear router
-	router := gin.Default()
+	// ========== Inicializar Repositorios ==========
+	productRepo := repository.NewProductRepository(db)
+	stockRepo := repository.NewStockRepository(db)
+	reservationRepo := repository.NewReservationRepository(db)
+	eventRepo := repository.NewEventRepository(db)
 
-	// Health check endpoint
+	// ========== Inicializar Servicios ==========
+	productService := service.NewProductService(productRepo, eventRepo)
+	stockService := service.NewStockService(stockRepo, productRepo, eventRepo)
+	reservationService := service.NewReservationService(reservationRepo, stockRepo, productRepo, eventRepo)
+	eventSyncService := service.NewEventSyncService(eventRepo)
+
+	// ========== Inicializar Handlers ==========
+	productHandler := handler.NewProductHandler(productService)
+	stockHandler := handler.NewStockHandler(stockService)
+	reservationHandler := handler.NewReservationHandler(reservationService)
+
+	// ========== Crear Router ==========
+	router := gin.New()
+
+	// ========== Middlewares Globales ==========
+	router.Use(middleware.Recovery())
+	router.Use(middleware.Logger())
+	router.Use(middleware.CORS())
+	router.Use(middleware.RequestID())
+
+	// ========== Health Check ==========
 	router.GET("/health", func(c *gin.Context) {
-		// Check database health
 		dbStatus := "healthy"
 		if err := database.HealthCheck(db); err != nil {
 			dbStatus = "unhealthy: " + err.Error()
@@ -59,7 +85,55 @@ func main() {
 		})
 	})
 
-	// Servidor HTTP
+	// ========== API v1 Routes ==========
+	v1 := router.Group("/api/v1")
+	{
+		// Product endpoints
+		products := v1.Group("/products")
+		{
+			products.POST("", productHandler.CreateProduct)
+			products.GET("", productHandler.ListProducts)
+			products.GET("/:id", productHandler.GetProduct)
+			products.PUT("/:id", productHandler.UpdateProduct)
+			products.DELETE("/:id", productHandler.DeleteProduct)
+			products.GET("/sku/:sku", productHandler.GetProductBySKU)
+		}
+
+		// Stock endpoints
+		stock := v1.Group("/stock")
+		{
+			stock.POST("", stockHandler.InitializeStock)
+			stock.GET("/product/:productId", stockHandler.GetAllStockByProduct)
+			stock.GET("/store/:storeId", stockHandler.GetAllStockByStore)
+			stock.GET("/low-stock", stockHandler.GetLowStockItems)
+			stock.GET("/:productId/:storeId", stockHandler.GetStockByProductAndStore)
+			stock.GET("/:productId/:storeId/availability", stockHandler.CheckAvailability)
+			stock.PUT("/:productId/:storeId", stockHandler.UpdateStock)
+			stock.POST("/:productId/:storeId/adjust", stockHandler.AdjustStock)
+			stock.POST("/:productId/:fromStoreId/transfer", stockHandler.TransferStock)
+		}
+
+		// Reservation endpoints
+		reservations := v1.Group("/reservations")
+		{
+			reservations.POST("", reservationHandler.CreateReservation)
+			reservations.GET("/:id", reservationHandler.GetReservation)
+			reservations.POST("/:id/confirm", reservationHandler.ConfirmReservation)
+			reservations.POST("/:id/cancel", reservationHandler.CancelReservation)
+			reservations.GET("/store/:storeId/pending", reservationHandler.GetPendingByStore)
+			reservations.GET("/product/:productId/store/:storeId", reservationHandler.GetReservationsByProduct)
+			reservations.GET("/stats", reservationHandler.GetReservationStats)
+		}
+	}
+
+	// ========== Background Workers ==========
+	// Worker para expirar reservas (cada 1 minuto)
+	go startReservationExpirationWorker(reservationService)
+
+	// Worker para sincronizar eventos (cada 10 segundos)
+	go startEventSyncWorker(eventSyncService)
+
+	// ========== Servidor HTTP ==========
 	srv := &http.Server{
 		Addr:    ":" + cfg.ServerPort,
 		Handler: router,
@@ -70,13 +144,14 @@ func main() {
 		log.Printf("🚀 Server starting on port %s (instance: %s)", cfg.ServerPort, cfg.InstanceID)
 		log.Printf("📊 Database driver: %s", cfg.DatabaseDriver)
 		log.Printf("🔒 Log level: %s, format: %s", cfg.LogLevel, cfg.LogFormat)
+		log.Printf("📡 API available at http://localhost:%s/api/v1", cfg.ServerPort)
 
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
 		}
 	}()
 
-	// Graceful shutdown
+	// ========== Graceful Shutdown ==========
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -91,4 +166,44 @@ func main() {
 	}
 
 	log.Println("✅ Server exited gracefully")
+}
+
+// startReservationExpirationWorker worker para expirar reservas
+func startReservationExpirationWorker(service *service.ReservationService) {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	log.Println("⏰ Reservation expiration worker started")
+
+	for range ticker.C {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		count, err := service.ProcessExpiredReservations(ctx)
+		cancel()
+
+		if err != nil {
+			log.Printf("Error processing expired reservations: %v", err)
+		} else if count > 0 {
+			log.Printf("✅ Expired %d reservations", count)
+		}
+	}
+}
+
+// startEventSyncWorker worker para sincronizar eventos
+func startEventSyncWorker(service *service.EventSyncService) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	log.Println("📡 Event synchronization worker started")
+
+	for range ticker.C {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		count, err := service.SyncPendingEvents(ctx, 100)
+		cancel()
+
+		if err != nil {
+			log.Printf("Error syncing events: %v", err)
+		} else if count > 0 {
+			log.Printf("✅ Synced %d events", count)
+		}
+	}
 }

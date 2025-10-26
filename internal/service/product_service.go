@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	
+
 	"inventory-system/internal/domain"
 	"inventory-system/internal/repository"
 )
@@ -31,7 +31,7 @@ func (s *ProductService) CreateProduct(ctx context.Context, product *domain.Prod
 	if err := product.Validate(); err != nil {
 		return nil, err
 	}
-	
+
 	// Verificar que no exista un producto con el mismo SKU
 	existing, err := s.productRepo.GetBySKU(ctx, product.SKU)
 	if err == nil && existing != nil {
@@ -39,13 +39,13 @@ func (s *ProductService) CreateProduct(ctx context.Context, product *domain.Prod
 			Message: fmt.Sprintf("product with SKU %s already exists", product.SKU),
 		}
 	}
-	
+
 	// Crear producto
 	err = s.productRepo.Create(ctx, product)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create product: %w", err)
 	}
-	
+
 	return product, nil
 }
 
@@ -67,7 +67,7 @@ func (s *ProductService) ListProducts(ctx context.Context, limit, offset int) ([
 	if offset < 0 {
 		offset = 0
 	}
-	
+
 	return s.productRepo.List(ctx, limit, offset)
 }
 
@@ -79,7 +79,7 @@ func (s *ProductService) ListProductsByCategory(ctx context.Context, category st
 	if offset < 0 {
 		offset = 0
 	}
-	
+
 	return s.productRepo.ListByCategory(ctx, category, limit, offset)
 }
 
@@ -89,13 +89,13 @@ func (s *ProductService) UpdateProduct(ctx context.Context, product *domain.Prod
 	if err := product.Validate(); err != nil {
 		return nil, err
 	}
-	
+
 	// Verificar que el producto existe
 	existing, err := s.productRepo.GetByID(ctx, product.ID)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Si cambia el SKU, verificar que no exista otro producto con ese SKU
 	if existing.SKU != product.SKU {
 		other, err := s.productRepo.GetBySKU(ctx, product.SKU)
@@ -105,13 +105,13 @@ func (s *ProductService) UpdateProduct(ctx context.Context, product *domain.Prod
 			}
 		}
 	}
-	
+
 	// Actualizar
 	err = s.productRepo.Update(ctx, product)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update product: %w", err)
 	}
-	
+
 	return s.productRepo.GetByID(ctx, product.ID)
 }
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
-	
+
 	"inventory-system/internal/domain"
 	"inventory-system/internal/repository"
 )
@@ -41,26 +41,26 @@ func (s *ReservationService) CreateReservation(ctx context.Context, productID, s
 			Message: "quantity must be positive",
 		}
 	}
-	
+
 	if ttlMinutes <= 0 {
 		return nil, &domain.ValidationError{
 			Field:   "ttlMinutes",
 			Message: "TTL must be positive",
 		}
 	}
-	
+
 	// Validar que el producto existe
 	_, err := s.productRepo.GetByID(ctx, productID)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Reservar stock (usa transacción interna con lock)
 	err = s.stockRepo.ReserveStock(ctx, productID, storeID, quantity)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Crear reserva
 	expiresAt := time.Now().Add(time.Duration(ttlMinutes) * time.Minute)
 	reservation := &domain.Reservation{
@@ -72,20 +72,20 @@ func (s *ReservationService) CreateReservation(ctx context.Context, productID, s
 		ExpiresAt: expiresAt,
 		CreatedAt: time.Now(),
 	}
-	
+
 	err = s.reservationRepo.Create(ctx, reservation)
 	if err != nil {
 		// Revertir reserva de stock
 		_ = s.stockRepo.ReleaseReservedStock(ctx, productID, storeID, quantity)
 		return nil, fmt.Errorf("failed to create reservation: %w", err)
 	}
-	
+
 	// Publicar evento
 	event := domain.NewReservationCreatedEvent(reservation.ID, productID, storeID, quantity)
 	if err := s.eventRepo.Save(ctx, event); err != nil {
 		fmt.Printf("Warning: failed to save reservation created event: %v\n", err)
 	}
-	
+
 	return reservation, nil
 }
 
@@ -101,7 +101,7 @@ func (s *ReservationService) ConfirmReservation(ctx context.Context, reservation
 	if err != nil {
 		return err
 	}
-	
+
 	// Validar estado
 	if reservation.Status != domain.ReservationStatusPending {
 		return &domain.ValidationError{
@@ -109,7 +109,7 @@ func (s *ReservationService) ConfirmReservation(ctx context.Context, reservation
 			Message: fmt.Sprintf("cannot confirm reservation with status: %s", reservation.Status),
 		}
 	}
-	
+
 	// Validar expiración
 	if reservation.IsExpired() {
 		return &domain.ValidationError{
@@ -117,13 +117,13 @@ func (s *ReservationService) ConfirmReservation(ctx context.Context, reservation
 			Message: "reservation has expired",
 		}
 	}
-	
+
 	// Confirmar en stock (decrementa quantity y reserved)
 	err = s.stockRepo.ConfirmReservation(ctx, reservation.ProductID, reservation.StoreID, reservation.Quantity)
 	if err != nil {
 		return fmt.Errorf("failed to confirm in stock: %w", err)
 	}
-	
+
 	// Actualizar estado de reserva
 	err = s.reservationRepo.UpdateStatus(ctx, reservationID, domain.ReservationStatusConfirmed)
 	if err != nil {
@@ -131,13 +131,13 @@ func (s *ReservationService) ConfirmReservation(ctx context.Context, reservation
 		_ = s.stockRepo.ReleaseReservedStock(ctx, reservation.ProductID, reservation.StoreID, reservation.Quantity)
 		return fmt.Errorf("failed to update reservation status: %w", err)
 	}
-	
+
 	// Publicar evento
 	event := domain.NewReservationConfirmedEvent(reservationID, reservation.ProductID, reservation.StoreID, reservation.Quantity)
 	if err := s.eventRepo.Save(ctx, event); err != nil {
 		fmt.Printf("Warning: failed to save reservation confirmed event: %v\n", err)
 	}
-	
+
 	return nil
 }
 
@@ -148,7 +148,7 @@ func (s *ReservationService) CancelReservation(ctx context.Context, reservationI
 	if err != nil {
 		return err
 	}
-	
+
 	// Validar estado (solo se puede cancelar si está pending)
 	if reservation.Status != domain.ReservationStatusPending {
 		return &domain.ValidationError{
@@ -156,13 +156,13 @@ func (s *ReservationService) CancelReservation(ctx context.Context, reservationI
 			Message: fmt.Sprintf("cannot cancel reservation with status: %s", reservation.Status),
 		}
 	}
-	
+
 	// Liberar stock reservado
 	err = s.stockRepo.ReleaseReservedStock(ctx, reservation.ProductID, reservation.StoreID, reservation.Quantity)
 	if err != nil {
 		return fmt.Errorf("failed to release reserved stock: %w", err)
 	}
-	
+
 	// Actualizar estado
 	err = s.reservationRepo.UpdateStatus(ctx, reservationID, domain.ReservationStatusCancelled)
 	if err != nil {
@@ -170,13 +170,13 @@ func (s *ReservationService) CancelReservation(ctx context.Context, reservationI
 		_ = s.stockRepo.ReserveStock(ctx, reservation.ProductID, reservation.StoreID, reservation.Quantity)
 		return fmt.Errorf("failed to update reservation status: %w", err)
 	}
-	
+
 	// Publicar evento
 	event := domain.NewReservationCancelledEvent(reservationID, reservation.ProductID, reservation.StoreID, reservation.Quantity)
 	if err := s.eventRepo.Save(ctx, event); err != nil {
 		fmt.Printf("Warning: failed to save reservation cancelled event: %v\n", err)
 	}
-	
+
 	return nil
 }
 
@@ -187,7 +187,7 @@ func (s *ReservationService) ExpireReservation(ctx context.Context, reservationI
 	if err != nil {
 		return err
 	}
-	
+
 	// Validar que realmente esté expirada
 	if !reservation.IsExpired() {
 		return &domain.ValidationError{
@@ -195,31 +195,31 @@ func (s *ReservationService) ExpireReservation(ctx context.Context, reservationI
 			Message: "reservation has not expired yet",
 		}
 	}
-	
+
 	// Validar estado
 	if reservation.Status != domain.ReservationStatusPending {
 		return nil // Ya fue procesada
 	}
-	
+
 	// Liberar stock
 	err = s.stockRepo.ReleaseReservedStock(ctx, reservation.ProductID, reservation.StoreID, reservation.Quantity)
 	if err != nil {
 		return fmt.Errorf("failed to release reserved stock: %w", err)
 	}
-	
+
 	// Marcar como expirada
 	err = s.reservationRepo.UpdateStatus(ctx, reservationID, domain.ReservationStatusExpired)
 	if err != nil {
 		_ = s.stockRepo.ReserveStock(ctx, reservation.ProductID, reservation.StoreID, reservation.Quantity)
 		return fmt.Errorf("failed to update reservation status: %w", err)
 	}
-	
+
 	// Publicar evento
 	event := domain.NewReservationExpiredEvent(reservationID, reservation.ProductID, reservation.StoreID, reservation.Quantity)
 	if err := s.eventRepo.Save(ctx, event); err != nil {
 		fmt.Printf("Warning: failed to save reservation expired event: %v\n", err)
 	}
-	
+
 	return nil
 }
 
@@ -230,7 +230,7 @@ func (s *ReservationService) ProcessExpiredReservations(ctx context.Context) (in
 	if err != nil {
 		return 0, fmt.Errorf("failed to get expired reservations: %w", err)
 	}
-	
+
 	processedCount := 0
 	for _, reservation := range expired {
 		err := s.ExpireReservation(ctx, reservation.ID)
@@ -241,7 +241,7 @@ func (s *ReservationService) ProcessExpiredReservations(ctx context.Context) (in
 		}
 		processedCount++
 	}
-	
+
 	return processedCount, nil
 }
 
@@ -263,7 +263,7 @@ func (s *ReservationService) CleanupOldReservations(ctx context.Context, daysOld
 			Message: "daysOld must be positive",
 		}
 	}
-	
+
 	olderThan := time.Now().AddDate(0, 0, -daysOld)
 	return s.reservationRepo.DeleteOldCompleted(ctx, olderThan)
 }
@@ -271,7 +271,7 @@ func (s *ReservationService) CleanupOldReservations(ctx context.Context, daysOld
 // GetReservationStats obtiene estadísticas de reservas
 func (s *ReservationService) GetReservationStats(ctx context.Context) (map[string]int, error) {
 	stats := make(map[string]int)
-	
+
 	// Contar por estado
 	statuses := []domain.ReservationStatus{
 		domain.ReservationStatusPending,
@@ -279,7 +279,7 @@ func (s *ReservationService) GetReservationStats(ctx context.Context) (map[strin
 		domain.ReservationStatusCancelled,
 		domain.ReservationStatusExpired,
 	}
-	
+
 	for _, status := range statuses {
 		count, err := s.reservationRepo.CountByStatus(ctx, status)
 		if err != nil {
@@ -287,6 +287,6 @@ func (s *ReservationService) GetReservationStats(ctx context.Context) (map[strin
 		}
 		stats[string(status)] = count
 	}
-	
+
 	return stats, nil
 }

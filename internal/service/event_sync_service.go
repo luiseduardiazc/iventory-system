@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
-	
+
 	"inventory-system/internal/repository"
 )
 
@@ -26,20 +26,20 @@ func (s *EventSyncService) SyncPendingEvents(ctx context.Context, batchSize int)
 	if batchSize <= 0 {
 		batchSize = 100
 	}
-	
+
 	// Obtener eventos pendientes
 	events, err := s.eventRepo.GetPendingEvents(ctx, batchSize)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get pending events: %w", err)
 	}
-	
+
 	if len(events) == 0 {
 		return 0, nil
 	}
-	
+
 	syncedCount := 0
 	eventIDs := make([]string, 0, len(events))
-	
+
 	for _, event := range events {
 		// TODO: Publicar a NATS JetStream
 		// err := s.natsPublisher.Publish(event)
@@ -47,12 +47,12 @@ func (s *EventSyncService) SyncPendingEvents(ctx context.Context, batchSize int)
 		//     fmt.Printf("Error publishing event %s: %v\n", event.ID, err)
 		//     continue
 		// }
-		
+
 		// Por ahora solo simulamos el éxito
 		eventIDs = append(eventIDs, event.ID)
 		syncedCount++
 	}
-	
+
 	// Marcar como sincronizados
 	if len(eventIDs) > 0 {
 		err = s.eventRepo.MarkMultipleAsSynced(ctx, eventIDs)
@@ -60,7 +60,7 @@ func (s *EventSyncService) SyncPendingEvents(ctx context.Context, batchSize int)
 			return syncedCount, fmt.Errorf("failed to mark events as synced: %w", err)
 		}
 	}
-	
+
 	return syncedCount, nil
 }
 
@@ -74,7 +74,7 @@ func (s *EventSyncService) CleanupOldEvents(ctx context.Context, daysOld int) (i
 	if daysOld <= 0 {
 		daysOld = 30 // Default: 30 días
 	}
-	
+
 	olderThan := time.Now().AddDate(0, 0, -daysOld)
 	return s.eventRepo.DeleteOldSynced(ctx, olderThan)
 }
@@ -87,7 +87,7 @@ func (s *EventSyncService) GetEventsByStore(ctx context.Context, storeID string,
 	if offset < 0 {
 		offset = 0
 	}
-	
+
 	return s.eventRepo.GetByStore(ctx, storeID, limit, offset)
 }
 

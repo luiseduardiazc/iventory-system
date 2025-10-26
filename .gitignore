@@ -1,0 +1,95 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.html
+coverage.out
+*.coverprofile
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+build/
+*.o
+*.a
+
+# OS generated files
+Thumbs.db
+Desktop.ini
+
+# Go sum (keep go.mod but ignore go.sum in some workflows)
+# Uncomment if you want to ignore go.sum
+# go.sum
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Air (live reload)
+.air.toml
+tmp/
+
+# Debugging
+debug
+__debug_bin
+
+# Reports
+reports/
+*.xml
+*.json
+
+# Cache
+.cache/
+*.cache
+
+# Profiling
+*.pprof
+*.prof
+*.mprof
+*.trace
+
+# Local development
+local/
+scratch/

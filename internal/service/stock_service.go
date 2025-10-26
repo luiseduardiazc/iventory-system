@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
-	
+
 	"inventory-system/internal/domain"
 	"inventory-system/internal/repository"
 )
@@ -36,7 +36,7 @@ func (s *StockService) GetStockByProductAndStore(ctx context.Context, productID,
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return s.stockRepo.GetByProductAndStore(ctx, productID, storeID)
 }
 
@@ -47,7 +47,7 @@ func (s *StockService) GetAllStockByProduct(ctx context.Context, productID strin
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return s.stockRepo.GetAllByProduct(ctx, productID)
 }
 
@@ -64,13 +64,13 @@ func (s *StockService) UpdateStock(ctx context.Context, productID, storeID strin
 			Message: "quantity cannot be negative",
 		}
 	}
-	
+
 	// Obtener stock actual
 	stock, err := s.stockRepo.GetByProductAndStore(ctx, productID, storeID)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Validar que la nueva cantidad no sea menor que la cantidad reservada
 	if newQuantity < stock.Reserved {
 		return nil, &domain.ValidationError{
@@ -78,17 +78,17 @@ func (s *StockService) UpdateStock(ctx context.Context, productID, storeID strin
 			Message: fmt.Sprintf("new quantity (%d) cannot be less than reserved (%d)", newQuantity, stock.Reserved),
 		}
 	}
-	
+
 	// Actualizar cantidad
 	oldQuantity := stock.Quantity
 	stock.Quantity = newQuantity
-	
+
 	// Usar optimistic locking
 	err = s.stockRepo.UpdateQuantity(ctx, stock)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Publicar evento de actualización de stock
 	event := domain.NewStockUpdatedEvent(productID, storeID, oldQuantity, newQuantity)
 	if err := s.eventRepo.Save(ctx, event); err != nil {
@@ -96,7 +96,7 @@ func (s *StockService) UpdateStock(ctx context.Context, productID, storeID strin
 		// TODO: implementar logging
 		fmt.Printf("Warning: failed to save stock update event: %v\n", err)
 	}
-	
+
 	// Retornar stock actualizado
 	return s.stockRepo.GetByProductAndStore(ctx, productID, storeID)
 }
@@ -108,9 +108,9 @@ func (s *StockService) AdjustStock(ctx context.Context, productID, storeID strin
 	if err != nil {
 		return nil, err
 	}
-	
+
 	newQuantity := stock.Quantity + adjustment
-	
+
 	// Validar que no quede negativo
 	if newQuantity < 0 {
 		return nil, &domain.ValidationError{
@@ -118,7 +118,7 @@ func (s *StockService) AdjustStock(ctx context.Context, productID, storeID strin
 			Message: fmt.Sprintf("adjustment would result in negative stock (current: %d, adjustment: %d)", stock.Quantity, adjustment),
 		}
 	}
-	
+
 	// Validar que no sea menor que lo reservado
 	if newQuantity < stock.Reserved {
 		return nil, &domain.ValidationError{
@@ -126,7 +126,7 @@ func (s *StockService) AdjustStock(ctx context.Context, productID, storeID strin
 			Message: fmt.Sprintf("new quantity (%d) cannot be less than reserved (%d)", newQuantity, stock.Reserved),
 		}
 	}
-	
+
 	return s.UpdateStock(ctx, productID, storeID, newQuantity)
 }
 
@@ -136,7 +136,7 @@ func (s *StockService) GetAvailableStock(ctx context.Context, productID, storeID
 	if err != nil {
 		return 0, err
 	}
-	
+
 	return stock.Available(), nil
 }
 
@@ -146,7 +146,7 @@ func (s *StockService) CheckAvailability(ctx context.Context, productID, storeID
 	if err != nil {
 		return false, err
 	}
-	
+
 	return available >= quantity, nil
 }
 
@@ -158,7 +158,7 @@ func (s *StockService) GetLowStockItems(ctx context.Context, threshold int) ([]*
 			Message: "threshold cannot be negative",
 		}
 	}
-	
+
 	return s.stockRepo.GetLowStockItems(ctx, threshold)
 }
 
@@ -170,13 +170,13 @@ func (s *StockService) InitializeStock(ctx context.Context, productID, storeID s
 			Message: "initial quantity cannot be negative",
 		}
 	}
-	
+
 	// Validar que el producto existe
 	_, err := s.productRepo.GetByID(ctx, productID)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Crear stock
 	stock := &domain.Stock{
 		ID:        generateID(), // TODO: implementar generador de IDs
@@ -186,18 +186,18 @@ func (s *StockService) InitializeStock(ctx context.Context, productID, storeID s
 		Reserved:  0,
 		Version:   1,
 	}
-	
+
 	err = s.stockRepo.Create(ctx, stock)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Publicar evento de creación de stock
 	event := domain.NewStockCreatedEvent(productID, storeID, initialQuantity)
 	if err := s.eventRepo.Save(ctx, event); err != nil {
 		fmt.Printf("Warning: failed to save stock created event: %v\n", err)
 	}
-	
+
 	return stock, nil
 }
 
@@ -209,20 +209,20 @@ func (s *StockService) TransferStock(ctx context.Context, productID, fromStoreID
 			Message: "transfer quantity must be positive",
 		}
 	}
-	
+
 	if fromStoreID == toStoreID {
 		return &domain.ValidationError{
 			Field:   "storeID",
 			Message: "cannot transfer to the same store",
 		}
 	}
-	
+
 	// Verificar disponibilidad en tienda origen
 	available, err := s.GetAvailableStock(ctx, productID, fromStoreID)
 	if err != nil {
 		return err
 	}
-	
+
 	if available < quantity {
 		return &domain.InsufficientStockError{
 			ProductID: productID,
@@ -231,13 +231,13 @@ func (s *StockService) TransferStock(ctx context.Context, productID, fromStoreID
 			Requested: quantity,
 		}
 	}
-	
+
 	// Decrementar en tienda origen
 	_, err = s.AdjustStock(ctx, productID, fromStoreID, -quantity)
 	if err != nil {
 		return fmt.Errorf("failed to decrement stock from source store: %w", err)
 	}
-	
+
 	// Incrementar en tienda destino
 	_, err = s.AdjustStock(ctx, productID, toStoreID, quantity)
 	if err != nil {
@@ -245,13 +245,13 @@ func (s *StockService) TransferStock(ctx context.Context, productID, fromStoreID
 		_, _ = s.AdjustStock(ctx, productID, fromStoreID, quantity)
 		return fmt.Errorf("failed to increment stock in destination store: %w", err)
 	}
-	
+
 	// Publicar evento de transferencia
 	event := domain.NewStockTransferredEvent(productID, fromStoreID, toStoreID, quantity)
 	if err := s.eventRepo.Save(ctx, event); err != nil {
 		fmt.Printf("Warning: failed to save stock transfer event: %v\n", err)
 	}
-	
+
 	return nil
 }
 

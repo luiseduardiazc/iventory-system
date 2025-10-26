@@ -65,18 +65,20 @@ CREATE INDEX IF NOT EXISTS idx_reservations_status_expires ON reservations(statu
 CREATE TABLE IF NOT EXISTS events (
     id TEXT PRIMARY KEY,
     event_type TEXT NOT NULL,
-    store_id TEXT NOT NULL,              -- Origen del evento
     aggregate_id TEXT NOT NULL,          -- ID del producto/reserva afectado
+    aggregate_type TEXT NOT NULL,        -- "product", "stock", "reservation"
+    store_id TEXT NOT NULL,              -- Origen del evento
     payload TEXT NOT NULL,               -- JSON con datos del evento
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    processed INTEGER DEFAULT 0          -- SQLite usa INTEGER para boolean
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    synced INTEGER DEFAULT 0,            -- SQLite usa INTEGER para boolean
+    synced_at TIMESTAMP NULL
 );
 
 -- Índices para events
-CREATE INDEX IF NOT EXISTS idx_events_type_timestamp ON events(event_type, timestamp);
+CREATE INDEX IF NOT EXISTS idx_events_type_created ON events(event_type, created_at);
 CREATE INDEX IF NOT EXISTS idx_events_store ON events(store_id);
 CREATE INDEX IF NOT EXISTS idx_events_aggregate ON events(aggregate_id);
-CREATE INDEX IF NOT EXISTS idx_events_unprocessed ON events(processed) WHERE processed = 0;
+CREATE INDEX IF NOT EXISTS idx_events_unsynced ON events(synced) WHERE synced = 0;
 
 -- Tabla de tiendas (metadata, opcional pero útil)
 CREATE TABLE IF NOT EXISTS stores (

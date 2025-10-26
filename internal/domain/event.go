@@ -5,45 +5,17 @@ import (
 	"time"
 )
 
-// EventType representa el tipo de evento
-type EventType string
-
-const (
-	// Stock events
-	EventTypeStockUpdated  EventType = "stock.updated"
-	EventTypeStockReserved EventType = "stock.reserved"
-	EventTypeStockReleased EventType = "stock.released"
-
-	// Reservation events
-	EventTypeReservationCreated   EventType = "reservation.created"
-	EventTypeReservationConfirmed EventType = "reservation.confirmed"
-	EventTypeReservationCancelled EventType = "reservation.cancelled"
-	EventTypeReservationExpired   EventType = "reservation.expired"
-)
-
 // Event representa un evento en el sistema (Event Sourcing)
 type Event struct {
-	ID          string                 `json:"id" db:"id"`
-	EventType   EventType              `json:"eventType" db:"event_type"`
-	StoreID     string                 `json:"storeId" db:"store_id"`         // Origen del evento
-	AggregateID string                 `json:"aggregateId" db:"aggregate_id"` // ID del producto/reserva afectado
-	Payload     map[string]interface{} `json:"payload" db:"payload"`          // Datos del evento
-	Timestamp   time.Time              `json:"timestamp" db:"timestamp"`
-	Processed   bool                   `json:"processed" db:"processed"` // Para tracking de procesamiento
-}
-
-// PayloadAsJSON retorna el payload como JSON string (para guardar en DB)
-func (e *Event) PayloadAsJSON() (string, error) {
-	bytes, err := json.Marshal(e.Payload)
-	if err != nil {
-		return "", err
-	}
-	return string(bytes), nil
-}
-
-// SetPayloadFromJSON establece el payload desde un JSON string
-func (e *Event) SetPayloadFromJSON(jsonStr string) error {
-	return json.Unmarshal([]byte(jsonStr), &e.Payload)
+	ID            string     `json:"id"`
+	EventType     string     `json:"event_type"`
+	AggregateID   string     `json:"aggregate_id"`   // ID del producto/reserva afectado
+	AggregateType string     `json:"aggregate_type"` // "product", "stock", "reservation"
+	StoreID       string     `json:"store_id"`       // Origen del evento
+	Payload       string     `json:"payload"`        // JSON string
+	CreatedAt     time.Time  `json:"created_at"`
+	Synced        bool       `json:"synced"`
+	SyncedAt      *time.Time `json:"synced_at,omitempty"`
 }
 
 // Validate verifica que el evento tenga datos válidos
@@ -60,22 +32,155 @@ func (e *Event) Validate() error {
 	return nil
 }
 
-// StockUpdatedPayload estructura del payload para stock.updated
-type StockUpdatedPayload struct {
-	ProductID   string `json:"product_id"`
-	StoreID     string `json:"store_id"`
-	OldQuantity int    `json:"old_quantity"`
-	NewQuantity int    `json:"new_quantity"`
-	Reason      string `json:"reason"` // SALE, RESTOCK, ADJUSTMENT, etc.
-	UserID      string `json:"user_id,omitempty"`
+// Helper functions para crear eventos comunes
+
+func NewStockUpdatedEvent(productID, storeID string, oldQuantity, newQuantity int) *Event {
+	payload := map[string]interface{}{
+		"product_id":   productID,
+		"store_id":     storeID,
+		"old_quantity": oldQuantity,
+		"new_quantity": newQuantity,
+	}
+	payloadJSON, _ := json.Marshal(payload)
+
+	return &Event{
+		ID:            generateEventID(),
+		EventType:     "stock.updated",
+		AggregateID:   productID,
+		AggregateType: "stock",
+		StoreID:       storeID,
+		Payload:       string(payloadJSON),
+		CreatedAt:     time.Now(),
+		Synced:        false,
+	}
 }
 
-// ReservationCreatedPayload estructura del payload para reservation.created
-type ReservationCreatedPayload struct {
-	ReservationID string    `json:"reservation_id"`
-	ProductID     string    `json:"product_id"`
-	StoreID       string    `json:"store_id"`
-	CustomerID    string    `json:"customer_id"`
-	Quantity      int       `json:"quantity"`
-	ExpiresAt     time.Time `json:"expires_at"`
+func NewStockCreatedEvent(productID, storeID string, initialQuantity int) *Event {
+	payload := map[string]interface{}{
+		"product_id":       productID,
+		"store_id":         storeID,
+		"initial_quantity": initialQuantity,
+	}
+	payloadJSON, _ := json.Marshal(payload)
+
+	return &Event{
+		ID:            generateEventID(),
+		EventType:     "stock.created",
+		AggregateID:   productID,
+		AggregateType: "stock",
+		StoreID:       storeID,
+		Payload:       string(payloadJSON),
+		CreatedAt:     time.Now(),
+		Synced:        false,
+	}
+}
+
+func NewStockTransferredEvent(productID, fromStoreID, toStoreID string, quantity int) *Event {
+	payload := map[string]interface{}{
+		"product_id":    productID,
+		"from_store_id": fromStoreID,
+		"to_store_id":   toStoreID,
+		"quantity":      quantity,
+	}
+	payloadJSON, _ := json.Marshal(payload)
+
+	return &Event{
+		ID:            generateEventID(),
+		EventType:     "stock.transferred",
+		AggregateID:   productID,
+		AggregateType: "stock",
+		StoreID:       fromStoreID,
+		Payload:       string(payloadJSON),
+		CreatedAt:     time.Now(),
+		Synced:        false,
+	}
+}
+
+func NewReservationCreatedEvent(reservationID, productID, storeID string, quantity int) *Event {
+	payload := map[string]interface{}{
+		"reservation_id": reservationID,
+		"product_id":     productID,
+		"store_id":       storeID,
+		"quantity":       quantity,
+	}
+	payloadJSON, _ := json.Marshal(payload)
+
+	return &Event{
+		ID:            generateEventID(),
+		EventType:     "reservation.created",
+		AggregateID:   reservationID,
+		AggregateType: "reservation",
+		StoreID:       storeID,
+		Payload:       string(payloadJSON),
+		CreatedAt:     time.Now(),
+		Synced:        false,
+	}
+}
+
+func NewReservationConfirmedEvent(reservationID, productID, storeID string, quantity int) *Event {
+	payload := map[string]interface{}{
+		"reservation_id": reservationID,
+		"product_id":     productID,
+		"store_id":       storeID,
+		"quantity":       quantity,
+	}
+	payloadJSON, _ := json.Marshal(payload)
+
+	return &Event{
+		ID:            generateEventID(),
+		EventType:     "reservation.confirmed",
+		AggregateID:   reservationID,
+		AggregateType: "reservation",
+		StoreID:       storeID,
+		Payload:       string(payloadJSON),
+		CreatedAt:     time.Now(),
+		Synced:        false,
+	}
+}
+
+func NewReservationCancelledEvent(reservationID, productID, storeID string, quantity int) *Event {
+	payload := map[string]interface{}{
+		"reservation_id": reservationID,
+		"product_id":     productID,
+		"store_id":       storeID,
+		"quantity":       quantity,
+	}
+	payloadJSON, _ := json.Marshal(payload)
+
+	return &Event{
+		ID:            generateEventID(),
+		EventType:     "reservation.cancelled",
+		AggregateID:   reservationID,
+		AggregateType: "reservation",
+		StoreID:       storeID,
+		Payload:       string(payloadJSON),
+		CreatedAt:     time.Now(),
+		Synced:        false,
+	}
+}
+
+func NewReservationExpiredEvent(reservationID, productID, storeID string, quantity int) *Event {
+	payload := map[string]interface{}{
+		"reservation_id": reservationID,
+		"product_id":     productID,
+		"store_id":       storeID,
+		"quantity":       quantity,
+	}
+	payloadJSON, _ := json.Marshal(payload)
+
+	return &Event{
+		ID:            generateEventID(),
+		EventType:     "reservation.expired",
+		AggregateID:   reservationID,
+		AggregateType: "reservation",
+		StoreID:       storeID,
+		Payload:       string(payloadJSON),
+		CreatedAt:     time.Now(),
+		Synced:        false,
+	}
+}
+
+// TODO: Implementar generador UUID
+func generateEventID() string {
+	return "evt-" + time.Now().Format("20060102150405") + "-temp"
 }

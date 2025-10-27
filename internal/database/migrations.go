@@ -84,6 +84,22 @@ CREATE INDEX IF NOT EXISTS idx_events_store ON events(store_id);
 CREATE INDEX IF NOT EXISTS idx_events_aggregate ON events(aggregate_id);
 CREATE INDEX IF NOT EXISTS idx_events_unsynced ON events(synced) WHERE synced = 0;
 
+-- Tabla de usuarios (para autenticación)
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('admin', 'user', 'operator')),
+    active INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_active ON users(active);
+
 -- Tabla de tiendas
 CREATE TABLE IF NOT EXISTS stores (
     id TEXT PRIMARY KEY,

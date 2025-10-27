@@ -13,6 +13,7 @@ import (
 const (
 	baseURL = "http://localhost:8080"
 	apiV1   = baseURL + "/api/v1"
+	apiKey  = "dev-key-store-001" // API Key para tests E2E
 )
 
 // TestClient encapsula el cliente HTTP para tests E2E
@@ -49,6 +50,7 @@ func (tc *TestClient) POST(t *testing.T, path string, body interface{}) (*http.R
 		t.Fatalf("Failed to create POST request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", apiKey)
 
 	resp, err := tc.client.Do(req)
 	if err != nil {
@@ -72,6 +74,7 @@ func (tc *TestClient) GET(t *testing.T, path string) (*http.Response, []byte) {
 	if err != nil {
 		t.Fatalf("Failed to create GET request: %v", err)
 	}
+	req.Header.Set("X-API-Key", apiKey)
 
 	resp, err := tc.client.Do(req)
 	if err != nil {
@@ -105,6 +108,7 @@ func (tc *TestClient) PUT(t *testing.T, path string, body interface{}) (*http.Re
 		t.Fatalf("Failed to create PUT request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", apiKey)
 
 	resp, err := tc.client.Do(req)
 	if err != nil {
@@ -128,6 +132,7 @@ func (tc *TestClient) DELETE(t *testing.T, path string) (*http.Response, []byte)
 	if err != nil {
 		t.Fatalf("Failed to create DELETE request: %v", err)
 	}
+	req.Header.Set("X-API-Key", apiKey)
 
 	resp, err := tc.client.Do(req)
 	if err != nil {

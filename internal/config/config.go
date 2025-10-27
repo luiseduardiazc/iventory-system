@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -31,9 +32,9 @@ type Config struct {
 	// Business
 	ReservationTTL int // segundos
 
-	// Security
-	JWTSecret         string
-	RateLimitRequests int // requests per minute
+	// Security (API Key Authentication)
+	APIKeys           map[string]string // key -> store_name
+	RateLimitRequests int               // requests per minute
 
 	// Observability
 	LogLevel      string // debug, info, warn, error
@@ -65,12 +66,40 @@ func Load() *Config {
 		RedisPort:         redisPort,
 		NATSUrl:           getEnv("NATS_URL", "nats://localhost:4222"),
 		ReservationTTL:    reservationTTL,
-		JWTSecret:         getEnv("JWT_SECRET", "change-me-in-production"),
+		APIKeys:           loadAPIKeys(),
 		RateLimitRequests: rateLimitRequests,
 		LogLevel:          getEnv("LOG_LEVEL", "info"),
 		LogFormat:         getEnv("LOG_FORMAT", "json"),
 		EnableMetrics:     enableMetrics,
 	}
+}
+
+func loadAPIKeys() map[string]string {
+	keys := make(map[string]string)
+
+	// Leer de variable de entorno API_KEYS
+	// Formato: key1:name1,key2:name2
+	apiKeysEnv := getEnv("API_KEYS", "")
+	if apiKeysEnv != "" {
+		pairs := strings.Split(apiKeysEnv, ",")
+		for _, pair := range pairs {
+			parts := strings.SplitN(pair, ":", 2)
+			if len(parts) == 2 {
+				keys[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+			}
+		}
+	}
+
+	// Si no hay keys configuradas, usar keys por defecto para desarrollo
+	if len(keys) == 0 {
+		keys = map[string]string{
+			"dev-key-store-001": "Store Madrid",
+			"dev-key-store-002": "Store Barcelona",
+			"dev-key-admin":     "Admin",
+		}
+	}
+
+	return keys
 }
 
 func getEnv(key, defaultValue string) string {

@@ -219,6 +219,16 @@ func handleError(c *gin.Context, err error) {
 			Error:   "Insufficient Stock",
 			Message: e.Error(),
 		})
+	case *domain.UnauthorizedError:
+		c.JSON(http.StatusUnauthorized, ErrorResponse{
+			Error:   "Unauthorized",
+			Message: e.Error(),
+		})
+	case *domain.ForbiddenError:
+		c.JSON(http.StatusForbidden, ErrorResponse{
+			Error:   "Forbidden",
+			Message: e.Error(),
+		})
 	default:
 		c.JSON(http.StatusInternalServerError, ErrorResponse{
 			Error:   "Internal Server Error",

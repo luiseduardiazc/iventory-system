@@ -93,3 +93,29 @@ func (e *InvalidStateError) Error() string {
 func (e *InvalidStateError) Code() string {
 	return "INVALID_STATE"
 }
+
+// UnauthorizedError representa un error de autenticación
+type UnauthorizedError struct {
+	Message string
+}
+
+func (e *UnauthorizedError) Error() string {
+	return e.Message
+}
+
+func (e *UnauthorizedError) Code() string {
+	return "UNAUTHORIZED"
+}
+
+// ForbiddenError representa un error de autorización (permisos)
+type ForbiddenError struct {
+	Message string
+}
+
+func (e *ForbiddenError) Error() string {
+	return e.Message
+}
+
+func (e *ForbiddenError) Code() string {
+	return "FORBIDDEN"
+}

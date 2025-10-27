@@ -110,8 +110,10 @@ func main() {
 			stock.GET("/:productId/:storeId/availability", stockHandler.CheckAvailability)
 			stock.PUT("/:productId/:storeId", stockHandler.UpdateStock)
 			stock.POST("/:productId/:storeId/adjust", stockHandler.AdjustStock)
-			stock.POST("/:productId/:fromStoreId/transfer", stockHandler.TransferStock)
 		}
+
+		// Stock transfer endpoint (separate to avoid route conflicts)
+		v1.POST("/stock/transfer", stockHandler.TransferStock)
 
 		// Reservation endpoints
 		reservations := v1.Group("/reservations")

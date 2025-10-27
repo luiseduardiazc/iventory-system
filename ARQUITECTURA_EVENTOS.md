@@ -2,7 +2,7 @@
 
 ## 📋 Resumen
 
-Este documento describe la arquitectura de publicación de eventos implementada en el sistema de inventario, que permite cambiar de broker de mensajes (Redis, NATS, Kafka) sin modificar el código de negocio.
+Este documento describe la arquitectura de publicación de eventos implementada en el sistema de inventario, que permite cambiar de broker de mensajes (Redis, Kafka) sin modificar el código de negocio.
 
 ## 🎯 Problema Resuelto
 
@@ -20,7 +20,7 @@ Este documento describe la arquitectura de publicación de eventos implementada 
 └─────────────────┘
 
 ❌ Eventos solo en base de datos (no pub/sub)
-❌ Para usar NATS/Kafka hay que modificar TODOS los servicios
+❌ Para usar Kafka hay que modificar TODOS los servicios
 ❌ No se pueden intercambiar brokers
 ❌ Viola el Principio de Inversión de Dependencias (SOLID)
 ```
@@ -41,8 +41,8 @@ Este documento describe la arquitectura de publicación de eventos implementada 
            │ implementan              │
            ▼                           │
     ┌──────────────┐          ┌───────────────┐
-    │ RedisPubl.   │          │ NATSPubl.     │
-    │ KafkaPubl.   │          │ MockPubl.     │
+    │ RedisPubl.   │          │ KafkaPubl.    │
+    │ MockPubl.    │          │ NoOpPubl.     │
     └──────────────┘          └───────────────┘
 
 ✅ Eventos publicados a broker real (Redis Streams)
@@ -179,7 +179,7 @@ if err := s.publisher.Publish(ctx, event); err != nil {
 
 ```bash
 # Elegir broker
-MESSAGE_BROKER=redis  # redis | nats | kafka | none
+MESSAGE_BROKER=redis  # redis | kafka | none
 
 # Configuración Redis
 REDIS_HOST=localhost
@@ -189,13 +189,6 @@ REDIS_MAX_LEN=100000
 ```
 
 ### Cambiar de Broker
-
-**Redis → NATS** (una vez implementado):
-```bash
-# Solo cambiar esta variable:
-MESSAGE_BROKER=nats
-NATS_URL=nats://localhost:4222
-```
 
 **Redis → Kafka** (una vez implementado):
 ```bash
@@ -210,20 +203,6 @@ MESSAGE_BROKER=none
 ```
 
 ## 🔌 Implementaciones Futuras
-
-### NATS Publisher (planificado)
-
-```go
-// internal/infrastructure/nats_publisher.go
-type NATSPublisher struct {
-    conn *nats.Conn
-}
-
-func (p *NATSPublisher) Publish(ctx context.Context, event *domain.Event) error {
-    data, _ := json.Marshal(event)
-    return p.conn.Publish("inventory.events", data)
-}
-```
 
 ### Kafka Publisher (planificado)
 
@@ -338,7 +317,7 @@ services:
 
 ### Open/Closed Principle (OCP)
 
-✅ **Extensible**: Podemos agregar `NATSPublisher` o `KafkaPublisher` sin modificar `StockService`  
+✅ **Extensible**: Podemos agregar `KafkaPublisher` sin modificar `StockService`  
 ✅ **Cerrado**: `EventPublisher` interface no cambia cuando agregamos implementaciones
 
 ### Single Responsibility Principle (SRP)
@@ -350,7 +329,6 @@ services:
 ## 📚 Referencias
 
 - **Redis Streams**: https://redis.io/docs/data-types/streams/
-- **NATS**: https://nats.io/
 - **Apache Kafka**: https://kafka.apache.org/
 - **Event-Driven Architecture**: https://martinfowler.com/articles/201701-event-driven.html
 - **Dependency Inversion**: https://en.wikipedia.org/wiki/Dependency_inversion_principle
@@ -366,7 +344,6 @@ services:
 - [x] main.go con inicialización de publisher
 - [x] Tests pasando (74/74)
 - [x] Documentación actualizada
-- [ ] NATSPublisher implementado (futuro)
 - [ ] KafkaPublisher implementado (futuro)
 - [ ] Métricas de publicación (futuro)
 - [ ] Consumer de eventos (futuro)

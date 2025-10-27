@@ -205,10 +205,6 @@ func initializeEventPublisher(cfg *config.Config) (domain.EventPublisher, error)
 		log.Printf("✅ Using Redis Streams as message broker (%s)", addr)
 		return publisher, nil
 
-	case "nats":
-		// Implementación futura para NATS JetStream
-		return nil, fmt.Errorf("NATS publisher not implemented yet. Set MESSAGE_BROKER=redis")
-
 	case "kafka":
 		// Implementación futura para Apache Kafka
 		return nil, fmt.Errorf("Kafka publisher not implemented yet. Set MESSAGE_BROKER=redis")

@@ -9,7 +9,7 @@ Prototipo de sistema de gestión de inventario distribuido que optimiza la consi
 
 ## ✨ Características
 
-- **Event-Driven Architecture**: Publicación de eventos en tiempo real con brokers intercambiables (Redis Streams, Kafka, etc.)
+- **Event-Driven Architecture**: Publicación de eventos en tiempo real con brokers intercambiables (Redis Streams, Kafka)
 - **Message Broker Flexible**: Arquitectura desacoplada que permite cambiar de Redis a Kafka sin modificar código de negocio
 - **Optimistic Locking**: Previene overselling manteniendo alta disponibilidad
 - **Reservas con TTL**: Auto-expiración de reservas para liberar stock automáticamente
@@ -40,13 +40,13 @@ El sistema utiliza una **arquitectura event-driven** con **brokers intercambiabl
 └────────────────┬────────────────────────────────────────────┘
                  │
                  │ implementan
-    ┌────────────┼────────────┬────────────┬──────────┐
-    ▼            ▼            ▼            ▼          ▼
-┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
-│ Redis   │ │ Kafka   │ │ NATS    │ │ Mock    │ │ NoOp    │
-│Publisher│ │Publisher│ │Publisher│ │Publisher│ │Publisher│
-│   ✅    │ │   🔜    │ │   🔜    │ │   ✅    │ │   ✅    │
-└─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘
+    ┌────────────┼────────────┬──────────┐
+    ▼            ▼            ▼          ▼
+┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
+│ Redis   │ │ Kafka   │ │ Mock    │ │ NoOp    │
+│Publisher│ │Publisher│ │Publisher│ │Publisher│
+│   ✅    │ │   🔜    │ │   ✅    │ │   ✅    │
+└─────────┘ └─────────┘ └─────────┘ └─────────┘
 ```
 
 ### Doble Persistencia: DB + Broker
@@ -416,7 +416,6 @@ go tool cover -html=coverage.out
 
 ## 📋 Roadmap Futuro
 
-- [ ] Implementar NATSPublisher para NATS JetStream
 - [ ] Implementar KafkaPublisher para Apache Kafka  
 - [ ] Consumer de eventos (microservicio separado)
 - [ ] Métricas de publicación (Prometheus)

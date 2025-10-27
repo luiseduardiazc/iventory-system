@@ -3,13 +3,12 @@ package domain
 import "context"
 
 // EventPublisher define el contrato para publicar eventos a un message broker.
-// Esta interfaz permite cambiar entre diferentes implementaciones (NATS, Kafka, Redis)
+// Esta interfaz permite cambiar entre diferentes implementaciones (Kafka, Redis)
 // sin modificar la lógica de negocio (Dependency Inversion Principle).
 //
 // Implementaciones disponibles:
-//   - NATSPublisher: Para NATS JetStream (baja latencia, distribuido)
-//   - KafkaPublisher: Para Apache Kafka (alto throughput, retención larga)
 //   - RedisPublisher: Para Redis Streams (simple, rápido setup)
+//   - KafkaPublisher: Para Apache Kafka (alto throughput, retención larga)
 //   - MockPublisher: Para tests unitarios
 type EventPublisher interface {
 	// Publish publica un evento al message broker.

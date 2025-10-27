@@ -14,24 +14,6 @@ services:
     networks:
       - inventory-network
 
-  nats:
-    image: nats:latest
-    container_name: inventory-nats
-    ports:
-      - "4222:4222"  # Client connections
-      - "8222:8222"  # HTTP management
-    command: 
-      - "-js"         # Enable JetStream
-      - "-m"
-      - "8222"
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - inventory-network
-
 networks:
   inventory-network:
     driver: bridge

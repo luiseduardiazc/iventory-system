@@ -25,7 +25,6 @@ type Config struct {
 	MessageBroker string // "redis", "kafka", "none"
 
 	// Message broker URLs (configuración específica por broker)
-	NATSUrl string // Para futura implementación
 
 	// Kafka (si MESSAGE_BROKER=kafka)
 	KafkaBrokers string // "localhost:9092,localhost:9093"
@@ -60,7 +59,6 @@ func Load() *Config {
 		RedisHost:         getEnv("REDIS_HOST", "localhost"),
 		RedisPort:         redisPort,
 		MessageBroker:     getEnv("MESSAGE_BROKER", "redis"), // Default: Redis (más simple)
-		NATSUrl:           getEnv("NATS_URL", "nats://localhost:4222"),
 		KafkaBrokers:      getEnv("KAFKA_BROKERS", "localhost:9092"),
 		ReservationTTL:    reservationTTL,
 		APIKeys:           loadAPIKeys(),

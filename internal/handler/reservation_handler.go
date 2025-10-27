@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
 	"inventory-system/internal/domain"
@@ -51,8 +51,8 @@ func (h *ReservationHandler) CreateReservation(c *gin.Context) {
 		return
 	}
 
-	// DEBUG: Log request
-	fmt.Printf("DEBUG CreateReservation: ProductID=%s, StoreID=%s, CustomerID=%s, Quantity=%d, TTL=%d\n",
+	// Log request for debugging
+	log.Printf("CreateReservation: ProductID=%s, StoreID=%s, CustomerID=%s, Quantity=%d, TTL=%d",
 		req.ProductID, req.StoreID, req.CustomerID, req.Quantity, req.TTLMinutes)
 
 	reservation, err := h.reservationService.CreateReservation(

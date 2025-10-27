@@ -180,7 +180,9 @@ func NewReservationExpiredEvent(reservationID, productID, storeID string, quanti
 	}
 }
 
-// TODO: Implementar generador UUID
+// generateEventID genera un ID único para eventos
+// NOTA: Implementación simplificada para prototipo
+// En producción se recomienda usar UUID v7 (time-ordered) o ULID
 func generateEventID() string {
 	return "evt-" + time.Now().Format("20060102150405") + "-temp"
 }

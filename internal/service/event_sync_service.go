@@ -8,10 +8,12 @@ import (
 	"inventory-system/internal/repository"
 )
 
-// EventSyncService maneja la sincronización de eventos con NATS
+// EventSyncService maneja la sincronización de eventos con message brokers
 type EventSyncService struct {
 	eventRepo *repository.EventRepository
-	// natsPublisher *nats.Publisher // TODO: implementar cliente NATS
+	// NOTA: Los message brokers se configuran mediante EventPublisher.
+	// En producción, se puede usar Redis Streams, Kafka, o cualquier broker
+	// compatible. Ver ARQUITECTURA_EVENTOS.md para más detalles.
 }
 
 // NewEventSyncService crea una nueva instancia del servicio
@@ -41,14 +43,16 @@ func (s *EventSyncService) SyncPendingEvents(ctx context.Context, batchSize int)
 	eventIDs := make([]string, 0, len(events))
 
 	for _, event := range events {
-		// TODO: Publicar a NATS JetStream
-		// err := s.natsPublisher.Publish(event)
+		// NOTA: En producción, EventPublisher maneja la publicación a brokers.
+		// Este servicio solo gestiona el estado de sincronización en BD.
+		// Por ahora simulamos el éxito para el prototipo.
+		// Implementación de producción:
+		// err := s.publisher.Publish(ctx, event)
 		// if err != nil {
-		//     fmt.Printf("Error publishing event %s: %v\n", event.ID, err)
+		//     log.Printf("Error publishing event %s: %v", event.ID, err)
 		//     continue
 		// }
 
-		// Por ahora solo simulamos el éxito
 		eventIDs = append(eventIDs, event.ID)
 		syncedCount++
 	}

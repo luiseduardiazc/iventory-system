@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 
@@ -15,6 +16,7 @@ type StockService struct {
 	stockRepo   *repository.StockRepository
 	productRepo *repository.ProductRepository
 	eventRepo   *repository.EventRepository
+	publisher   domain.EventPublisher // ← Event publisher para pub/sub en tiempo real
 }
 
 // NewStockService crea una nueva instancia del servicio
@@ -22,11 +24,13 @@ func NewStockService(
 	stockRepo *repository.StockRepository,
 	productRepo *repository.ProductRepository,
 	eventRepo *repository.EventRepository,
+	publisher domain.EventPublisher, // ← Inyección de dependencia
 ) *StockService {
 	return &StockService{
 		stockRepo:   stockRepo,
 		productRepo: productRepo,
 		eventRepo:   eventRepo,
+		publisher:   publisher,
 	}
 }
 
@@ -92,10 +96,17 @@ func (s *StockService) UpdateStock(ctx context.Context, productID, storeID strin
 
 	// Publicar evento de actualización de stock
 	event := domain.NewStockUpdatedEvent(productID, storeID, oldQuantity, newQuantity)
+
+	// Persistir evento en BD (para auditoría/event sourcing)
 	if err := s.eventRepo.Save(ctx, event); err != nil {
 		// Log error pero no fallar la operación
-		// TODO: implementar logging
-		fmt.Printf("Warning: failed to save stock update event: %v\n", err)
+		log.Printf("Warning: failed to save stock update event: %v", err)
+	}
+
+	// Publicar evento a message broker (Redis/Kafka/etc.) en tiempo real
+	if err := s.publisher.Publish(ctx, event); err != nil {
+		// Log error pero no fallar la operación
+		log.Printf("Warning: failed to publish stock update event: %v", err)
 	}
 
 	// Retornar stock actualizado
@@ -195,8 +206,15 @@ func (s *StockService) InitializeStock(ctx context.Context, productID, storeID s
 
 	// Publicar evento de creación de stock
 	event := domain.NewStockCreatedEvent(productID, storeID, initialQuantity)
+
+	// Persistir en BD
 	if err := s.eventRepo.Save(ctx, event); err != nil {
-		fmt.Printf("Warning: failed to save stock created event: %v\n", err)
+		log.Printf("Warning: failed to save stock created event: %v", err)
+	}
+
+	// Publicar a message broker
+	if err := s.publisher.Publish(ctx, event); err != nil {
+		log.Printf("Warning: failed to publish stock created event: %v", err)
 	}
 
 	return stock, nil
@@ -249,8 +267,15 @@ func (s *StockService) TransferStock(ctx context.Context, productID, fromStoreID
 
 	// Publicar evento de transferencia
 	event := domain.NewStockTransferredEvent(productID, fromStoreID, toStoreID, quantity)
+
+	// Persistir en BD
 	if err := s.eventRepo.Save(ctx, event); err != nil {
-		fmt.Printf("Warning: failed to save stock transfer event: %v\n", err)
+		log.Printf("Warning: failed to save stock transfer event: %v", err)
+	}
+
+	// Publicar a message broker
+	if err := s.publisher.Publish(ctx, event); err != nil {
+		log.Printf("Warning: failed to publish stock transfer event: %v", err)
 	}
 
 	return nil

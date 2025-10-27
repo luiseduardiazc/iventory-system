@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,6 +18,7 @@ type ReservationService struct {
 	stockRepo       *repository.StockRepository
 	productRepo     *repository.ProductRepository
 	eventRepo       *repository.EventRepository
+	publisher       domain.EventPublisher // ← Event publisher para pub/sub
 }
 
 // NewReservationService crea una nueva instancia del servicio
@@ -25,12 +27,14 @@ func NewReservationService(
 	stockRepo *repository.StockRepository,
 	productRepo *repository.ProductRepository,
 	eventRepo *repository.EventRepository,
+	publisher domain.EventPublisher, // ← Inyección de dependencia
 ) *ReservationService {
 	return &ReservationService{
 		reservationRepo: reservationRepo,
 		stockRepo:       stockRepo,
 		productRepo:     productRepo,
 		eventRepo:       eventRepo,
+		publisher:       publisher,
 	}
 }
 
@@ -92,8 +96,15 @@ func (s *ReservationService) CreateReservation(ctx context.Context, productID, s
 
 	// Publicar evento
 	event := domain.NewReservationCreatedEvent(reservation.ID, productID, storeID, quantity)
+
+	// Persistir en BD
 	if err := s.eventRepo.Save(ctx, event); err != nil {
-		fmt.Printf("Warning: failed to save reservation created event: %v\n", err)
+		log.Printf("Warning: failed to save reservation created event: %v", err)
+	}
+
+	// Publicar a message broker
+	if err := s.publisher.Publish(ctx, event); err != nil {
+		log.Printf("Warning: failed to publish reservation created event: %v", err)
 	}
 
 	return reservation, nil
@@ -144,8 +155,15 @@ func (s *ReservationService) ConfirmReservation(ctx context.Context, reservation
 
 	// Publicar evento
 	event := domain.NewReservationConfirmedEvent(reservationID, reservation.ProductID, reservation.StoreID, reservation.Quantity)
+
+	// Persistir en BD
 	if err := s.eventRepo.Save(ctx, event); err != nil {
-		fmt.Printf("Warning: failed to save reservation confirmed event: %v\n", err)
+		log.Printf("Warning: failed to save reservation confirmed event: %v", err)
+	}
+
+	// Publicar a message broker
+	if err := s.publisher.Publish(ctx, event); err != nil {
+		log.Printf("Warning: failed to publish reservation confirmed event: %v", err)
 	}
 
 	return nil
@@ -183,8 +201,15 @@ func (s *ReservationService) CancelReservation(ctx context.Context, reservationI
 
 	// Publicar evento
 	event := domain.NewReservationCancelledEvent(reservationID, reservation.ProductID, reservation.StoreID, reservation.Quantity)
+
+	// Persistir en BD
 	if err := s.eventRepo.Save(ctx, event); err != nil {
-		fmt.Printf("Warning: failed to save reservation cancelled event: %v\n", err)
+		log.Printf("Warning: failed to save reservation cancelled event: %v", err)
+	}
+
+	// Publicar a message broker
+	if err := s.publisher.Publish(ctx, event); err != nil {
+		log.Printf("Warning: failed to publish reservation cancelled event: %v", err)
 	}
 
 	return nil
@@ -226,8 +251,15 @@ func (s *ReservationService) ExpireReservation(ctx context.Context, reservationI
 
 	// Publicar evento
 	event := domain.NewReservationExpiredEvent(reservationID, reservation.ProductID, reservation.StoreID, reservation.Quantity)
+
+	// Persistir en BD
 	if err := s.eventRepo.Save(ctx, event); err != nil {
-		fmt.Printf("Warning: failed to save reservation expired event: %v\n", err)
+		log.Printf("Warning: failed to save reservation expired event: %v", err)
+	}
+
+	// Publicar a message broker
+	if err := s.publisher.Publish(ctx, event); err != nil {
+		log.Printf("Warning: failed to publish reservation expired event: %v", err)
 	}
 
 	return nil
@@ -246,7 +278,7 @@ func (s *ReservationService) ProcessExpiredReservations(ctx context.Context) (in
 		err := s.ExpireReservation(ctx, reservation.ID)
 		if err != nil {
 			// Log error pero continuar con las demás
-			fmt.Printf("Error expiring reservation %s: %v\n", reservation.ID, err)
+			log.Printf("Error expiring reservation %s: %v", reservation.ID, err)
 			continue
 		}
 		processedCount++

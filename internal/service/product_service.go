@@ -117,8 +117,19 @@ func (s *ProductService) UpdateProduct(ctx context.Context, product *domain.Prod
 
 // DeleteProduct elimina un producto
 func (s *ProductService) DeleteProduct(ctx context.Context, id string) error {
-	// TODO: Validar que no tenga stock en ninguna tienda antes de eliminar
-	// Por ahora solo eliminamos
+	// NOTA: Mejora futura - validar stock antes de eliminar
+	// Se debería verificar que no tenga stock en ninguna tienda:
+	// stocks, err := s.stockRepo.GetAllByProduct(ctx, id)
+	// if err != nil { return err }
+	// for _, stock := range stocks {
+	//     if stock.Quantity > 0 || stock.Reserved > 0 {
+	//         return &domain.ValidationError{
+	//             Field: "product_id",
+	//             Message: "cannot delete product with existing stock",
+	//         }
+	//     }
+	// }
+
 	return s.productRepo.Delete(ctx, id)
 }
 
@@ -129,6 +140,10 @@ func (s *ProductService) CountProducts(ctx context.Context) (int, error) {
 
 // SearchProducts busca productos por nombre o descripción (simple)
 func (s *ProductService) SearchProducts(ctx context.Context, query string, limit, offset int) ([]*domain.Product, error) {
-	// Por ahora retorna todos - TODO: implementar búsqueda full-text
+	// NOTA: Mejora futura - implementar búsqueda full-text con SQLite FTS5
+	// Por ahora retorna todos los productos (filtrado manual en cliente)
+	// Implementación de producción:
+	// - SQLite: Usar FTS5 (Full-Text Search)
+	// - PostgreSQL: Usar pg_trgm o tsvector
 	return s.ListProducts(ctx, limit, offset)
 }

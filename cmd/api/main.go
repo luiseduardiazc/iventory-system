@@ -2,16 +2,20 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"inventory-system/internal/config"
 	"inventory-system/internal/database"
+	"inventory-system/internal/domain"
 	"inventory-system/internal/handler"
+	"inventory-system/internal/infrastructure"
 	"inventory-system/internal/middleware"
 	"inventory-system/internal/repository"
 	"inventory-system/internal/service"
@@ -48,10 +52,17 @@ func main() {
 	reservationRepo := repository.NewReservationRepository(db)
 	eventRepo := repository.NewEventRepository(db)
 
+	// ========== Inicializar Event Publisher (Pub/Sub) ==========
+	publisher, err := initializeEventPublisher(cfg)
+	if err != nil {
+		log.Fatalf("Failed to initialize event publisher: %v", err)
+	}
+	defer publisher.Close()
+
 	// ========== Inicializar Servicios ==========
 	productService := service.NewProductService(productRepo, eventRepo)
-	stockService := service.NewStockService(stockRepo, productRepo, eventRepo)
-	reservationService := service.NewReservationService(reservationRepo, stockRepo, productRepo, eventRepo)
+	stockService := service.NewStockService(stockRepo, productRepo, eventRepo, publisher)
+	reservationService := service.NewReservationService(reservationRepo, stockRepo, productRepo, eventRepo, publisher)
 	eventSyncService := service.NewEventSyncService(eventRepo)
 
 	// ========== Inicializar Handlers ==========
@@ -150,7 +161,7 @@ func main() {
 		log.Printf("📊 Database driver: %s", cfg.DatabaseDriver)
 		log.Printf("🔒 Log level: %s, format: %s", cfg.LogLevel, cfg.LogFormat)
 		log.Printf("� API Keys loaded: %d", len(cfg.APIKeys))
-		log.Printf("�� API available at http://localhost:%s/api/v1", cfg.ServerPort)
+		log.Printf("��📡 API available at http://localhost:%s/api/v1", cfg.ServerPort)
 
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
@@ -172,6 +183,61 @@ func main() {
 	}
 
 	log.Println("✅ Server exited gracefully")
+}
+
+// initializeEventPublisher crea el publisher según la configuración.
+// Soporta múltiples implementaciones: redis, kafka, none.
+func initializeEventPublisher(cfg *config.Config) (domain.EventPublisher, error) {
+	broker := strings.ToLower(cfg.MessageBroker)
+
+	switch broker {
+	case "redis":
+		// Redis Streams (opción por defecto - simple y rápida)
+		addr := fmt.Sprintf("%s:%d", cfg.RedisHost, cfg.RedisPort)
+		publisher, err := infrastructure.NewRedisPublisher(infrastructure.RedisPublisherConfig{
+			Addr:       addr,
+			StreamName: "inventory-events",
+			MaxLen:     100000, // Retener últimos 100k eventos
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Redis publisher: %w", err)
+		}
+		log.Printf("✅ Using Redis Streams as message broker (%s)", addr)
+		return publisher, nil
+
+	case "nats":
+		// Implementación futura para NATS JetStream
+		return nil, fmt.Errorf("NATS publisher not implemented yet. Set MESSAGE_BROKER=redis")
+
+	case "kafka":
+		// Implementación futura para Apache Kafka
+		return nil, fmt.Errorf("Kafka publisher not implemented yet. Set MESSAGE_BROKER=redis")
+
+	case "none", "":
+		// No publisher (solo logging)
+		log.Printf("⚠️  No message broker configured (MESSAGE_BROKER=none)")
+		return &noOpPublisher{}, nil
+
+	default:
+		return nil, fmt.Errorf("unknown message broker: %s (options: redis, kafka, none)", broker)
+	}
+}
+
+// noOpPublisher es un publisher que no hace nada (para cuando MESSAGE_BROKER=none)
+type noOpPublisher struct{}
+
+func (n *noOpPublisher) Publish(ctx context.Context, event *domain.Event) error {
+	log.Printf("📝 [NO-OP] Would publish event: type=%s, store=%s", event.EventType, event.StoreID)
+	return nil
+}
+
+func (n *noOpPublisher) PublishBatch(ctx context.Context, events []*domain.Event) error {
+	log.Printf("📝 [NO-OP] Would publish batch: %d events", len(events))
+	return nil
+}
+
+func (n *noOpPublisher) Close() error {
+	return nil
 }
 
 // startReservationExpirationWorker worker para expirar reservas

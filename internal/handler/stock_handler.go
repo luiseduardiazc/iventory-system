@@ -179,8 +179,10 @@ func (h *StockHandler) AdjustStock(c *gin.Context) {
 
 // TransferStockRequest representa la petición para transferir stock
 type TransferStockRequest struct {
-	ToStoreID string `json:"to_store_id" binding:"required"`
-	Quantity  int    `json:"quantity" binding:"required,min=1"`
+	ProductID   string `json:"product_id" binding:"required"`
+	FromStoreID string `json:"from_store_id" binding:"required"`
+	ToStoreID   string `json:"to_store_id" binding:"required"`
+	Quantity    int    `json:"quantity" binding:"required,min=1"`
 }
 
 // TransferStock godoc
@@ -188,17 +190,12 @@ type TransferStockRequest struct {
 // @Tags stock
 // @Accept json
 // @Produce json
-// @Param productId path string true "ID del producto"
-// @Param fromStoreId path string true "ID de la tienda origen"
-// @Param request body TransferStockRequest true "Tienda destino y cantidad"
+// @Param request body TransferStockRequest true "Datos de transferencia"
 // @Success 200 {object} map[string]string
 // @Failure 400 {object} ErrorResponse
 // @Failure 409 {object} ErrorResponse "Stock insuficiente"
-// @Router /stock/{productId}/{fromStoreId}/transfer [post]
+// @Router /stock/transfer [post]
 func (h *StockHandler) TransferStock(c *gin.Context) {
-	productID := c.Param("productId")
-	fromStoreID := c.Param("fromStoreId")
-
 	var req TransferStockRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{
@@ -208,7 +205,7 @@ func (h *StockHandler) TransferStock(c *gin.Context) {
 		return
 	}
 
-	err := h.stockService.TransferStock(c.Request.Context(), productID, fromStoreID, req.ToStoreID, req.Quantity)
+	err := h.stockService.TransferStock(c.Request.Context(), req.ProductID, req.FromStoreID, req.ToStoreID, req.Quantity)
 	if err != nil {
 		handleError(c, err)
 		return
@@ -216,8 +213,8 @@ func (h *StockHandler) TransferStock(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message":       "Stock transferred successfully",
-		"product_id":    productID,
-		"from_store_id": fromStoreID,
+		"product_id":    req.ProductID,
+		"from_store_id": req.FromStoreID,
 		"to_store_id":   req.ToStoreID,
 		"quantity":      req.Quantity,
 	})

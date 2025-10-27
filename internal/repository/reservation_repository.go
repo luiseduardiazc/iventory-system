@@ -22,18 +22,25 @@ func NewReservationRepository(db *sql.DB) *ReservationRepository {
 // Create crea una nueva reserva
 func (r *ReservationRepository) Create(ctx context.Context, reservation *domain.Reservation) error {
 	query := `
-		INSERT INTO reservations (id, product_id, store_id, quantity, status, expires_at, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO reservations (id, product_id, store_id, customer_id, quantity, status, expires_at, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
+
+	updatedAt := reservation.CreatedAt // Por defecto, igual a created_at
+	if reservation.UpdatedAt != nil {
+		updatedAt = *reservation.UpdatedAt
+	}
 
 	_, err := r.db.ExecContext(ctx, query,
 		reservation.ID,
 		reservation.ProductID,
 		reservation.StoreID,
+		reservation.CustomerID,
 		reservation.Quantity,
 		reservation.Status,
 		reservation.ExpiresAt,
 		reservation.CreatedAt,
+		updatedAt,
 	)
 
 	if err != nil {

@@ -27,13 +27,3 @@ func (p *Product) Validate() error {
 	}
 	return nil
 }
-
-// ValidationError representa un error de validación
-type ValidationError struct {
-	Field   string
-	Message string
-}
-
-func (e *ValidationError) Error() string {
-	return e.Field + ": " + e.Message
-}

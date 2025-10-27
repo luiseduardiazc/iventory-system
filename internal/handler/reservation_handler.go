@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
 	"inventory-system/internal/domain"
@@ -25,6 +26,7 @@ func NewReservationHandler(reservationService *service.ReservationService) *Rese
 type CreateReservationRequest struct {
 	ProductID  string `json:"product_id" binding:"required"`
 	StoreID    string `json:"store_id" binding:"required"`
+	CustomerID string `json:"customer_id" binding:"required"`
 	Quantity   int    `json:"quantity" binding:"required,min=1"`
 	TTLMinutes int    `json:"ttl_minutes" binding:"required,min=1,max=1440"` // Max 24 horas
 }
@@ -49,10 +51,15 @@ func (h *ReservationHandler) CreateReservation(c *gin.Context) {
 		return
 	}
 
+	// DEBUG: Log request
+	fmt.Printf("DEBUG CreateReservation: ProductID=%s, StoreID=%s, CustomerID=%s, Quantity=%d, TTL=%d\n",
+		req.ProductID, req.StoreID, req.CustomerID, req.Quantity, req.TTLMinutes)
+
 	reservation, err := h.reservationService.CreateReservation(
 		c.Request.Context(),
 		req.ProductID,
 		req.StoreID,
+		req.CustomerID,
 		req.Quantity,
 		req.TTLMinutes,
 	)

@@ -33,7 +33,7 @@ func NewReservationService(
 }
 
 // CreateReservation crea una nueva reserva de stock
-func (s *ReservationService) CreateReservation(ctx context.Context, productID, storeID string, quantity int, ttlMinutes int) (*domain.Reservation, error) {
+func (s *ReservationService) CreateReservation(ctx context.Context, productID, storeID, customerID string, quantity int, ttlMinutes int) (*domain.Reservation, error) {
 	// Validaciones
 	if quantity <= 0 {
 		return nil, &domain.ValidationError{
@@ -46,6 +46,13 @@ func (s *ReservationService) CreateReservation(ctx context.Context, productID, s
 		return nil, &domain.ValidationError{
 			Field:   "ttlMinutes",
 			Message: "TTL must be positive",
+		}
+	}
+
+	if customerID == "" {
+		return nil, &domain.ValidationError{
+			Field:   "customerID",
+			Message: "customerID is required",
 		}
 	}
 
@@ -64,13 +71,14 @@ func (s *ReservationService) CreateReservation(ctx context.Context, productID, s
 	// Crear reserva
 	expiresAt := time.Now().Add(time.Duration(ttlMinutes) * time.Minute)
 	reservation := &domain.Reservation{
-		ID:        generateID(),
-		ProductID: productID,
-		StoreID:   storeID,
-		Quantity:  quantity,
-		Status:    domain.ReservationStatusPending,
-		ExpiresAt: expiresAt,
-		CreatedAt: time.Now(),
+		ID:         generateID(),
+		ProductID:  productID,
+		StoreID:    storeID,
+		CustomerID: customerID,
+		Quantity:   quantity,
+		Status:     domain.ReservationStatusPending,
+		ExpiresAt:  expiresAt,
+		CreatedAt:  time.Now(),
 	}
 
 	err = s.reservationRepo.Create(ctx, reservation)

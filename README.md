@@ -13,7 +13,7 @@ Prototipo de sistema de gestión de inventario distribuido que optimiza la consi
 - **Message Broker Flexible**: Arquitectura desacoplada que permite cambiar de Redis a Kafka sin modificar código de negocio
 - **Optimistic Locking**: Previene overselling manteniendo alta disponibilidad
 - **Reservas con TTL**: Auto-expiración de reservas para liberar stock automáticamente
-- **Multi-Database**: Soporte para PostgreSQL (producción) y SQLite (desarrollo/testing)
+- **SQLite Database**: Base de datos ligera y embebida para desarrollo y producción
 - **Event Sourcing**: Auditoría completa de eventos en base de datos + publicación en tiempo real
 - **Arquitectura SOLID**: Dependency Inversion Principle para escalabilidad y mantenibilidad
 - **74/74 Tests Pasando**: Cobertura completa con mocks para desarrollo sin dependencias externas
@@ -128,14 +128,14 @@ MESSAGE_BROKER=none    # Sin broker externo
 go run cmd/api/main.go
 ```
 
-### Opción 2: Producción con PostgreSQL + Redis
+### Opción 2: Con Redis para eventos
 
 ```bash
-# Iniciar infraestructura
-docker-compose up -d postgres redis
+# Iniciar Redis
+docker-compose up -d redis
 
 # Editar .env
-DATABASE_DRIVER=postgres
+DATABASE_DRIVER=sqlite
 MESSAGE_BROKER=redis
 
 # Ejecutar
@@ -387,9 +387,9 @@ go tool cover -html=coverage.out
 
 | Categoría | Tecnología | Justificación |
 |-----------|-----------|---------------|
-| **Lenguaje** | Go 1.24+ | Concurrencia nativa, performance, simplicidad |
+| **Lenguaje** | Go 1.21+ | Concurrencia nativa, performance, simplicidad |
 | **Web Framework** | Gin | Ligero, rápido, rico ecosistema de middleware |
-| **Base de Datos** | PostgreSQL / SQLite | PostgreSQL para producción, SQLite para dev/test |
+| **Base de Datos** | SQLite | Ligera, embebida, sin configuración, ideal para desarrollo y producción |
 | **Cache** | Redis | Alta velocidad, soporte TTL nativo |
 | **Message Broker** | Redis Streams / Kafka (futuro) | Pub/Sub en tiempo real, arquitectura desacoplada |
 | **Arquitectura** | Event-Driven + SOLID | Escalable, mantenible, testeable |

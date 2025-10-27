@@ -88,19 +88,22 @@ func main() {
 	// ========== API v1 Routes ==========
 	v1 := router.Group("/api/v1")
 	{
-		// Product endpoints
+		// Product endpoints (lectura pública, escritura protegida)
 		products := v1.Group("/products")
 		{
-			products.POST("", productHandler.CreateProduct)
+			// Públicos (sin API Key)
 			products.GET("", productHandler.ListProducts)
 			products.GET("/:id", productHandler.GetProduct)
-			products.PUT("/:id", productHandler.UpdateProduct)
-			products.DELETE("/:id", productHandler.DeleteProduct)
 			products.GET("/sku/:sku", productHandler.GetProductBySKU)
+
+			// Protegidos (requieren API Key)
+			products.POST("", middleware.APIKeyAuth(cfg.APIKeys), productHandler.CreateProduct)
+			products.PUT("/:id", middleware.APIKeyAuth(cfg.APIKeys), productHandler.UpdateProduct)
+			products.DELETE("/:id", middleware.APIKeyAuth(cfg.APIKeys), productHandler.DeleteProduct)
 		}
 
-		// Stock endpoints
-		stock := v1.Group("/stock")
+		// Stock endpoints (todos protegidos)
+		stock := v1.Group("/stock", middleware.APIKeyAuth(cfg.APIKeys))
 		{
 			stock.POST("", stockHandler.InitializeStock)
 			stock.GET("/product/:productId", stockHandler.GetAllStockByProduct)
@@ -112,11 +115,11 @@ func main() {
 			stock.POST("/:productId/:storeId/adjust", stockHandler.AdjustStock)
 		}
 
-		// Stock transfer endpoint (separate to avoid route conflicts)
-		v1.POST("/stock/transfer", stockHandler.TransferStock)
+		// Stock transfer endpoint (protegido)
+		v1.POST("/stock/transfer", middleware.APIKeyAuth(cfg.APIKeys), stockHandler.TransferStock)
 
-		// Reservation endpoints
-		reservations := v1.Group("/reservations")
+		// Reservation endpoints (todos protegidos)
+		reservations := v1.Group("/reservations", middleware.APIKeyAuth(cfg.APIKeys))
 		{
 			reservations.POST("", reservationHandler.CreateReservation)
 			reservations.GET("/:id", reservationHandler.GetReservation)
@@ -146,7 +149,8 @@ func main() {
 		log.Printf("🚀 Server starting on port %s (instance: %s)", cfg.ServerPort, cfg.InstanceID)
 		log.Printf("📊 Database driver: %s", cfg.DatabaseDriver)
 		log.Printf("🔒 Log level: %s, format: %s", cfg.LogLevel, cfg.LogFormat)
-		log.Printf("📡 API available at http://localhost:%s/api/v1", cfg.ServerPort)
+		log.Printf("� API Keys loaded: %d", len(cfg.APIKeys))
+		log.Printf("�� API available at http://localhost:%s/api/v1", cfg.ServerPort)
 
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)

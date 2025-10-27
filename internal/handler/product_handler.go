@@ -3,12 +3,12 @@ package handler
 import (
 	"net/http"
 	"strconv"
-	"time"
 
 	"inventory-system/internal/domain"
 	"inventory-system/internal/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // ProductHandler maneja las peticiones HTTP para productos
@@ -44,9 +44,9 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 		return
 	}
 
-	// Generar ID si no viene
+	// Generar ID con UUID real si no viene
 	if product.ID == "" {
-		product.ID = generateUUID()
+		product.ID = uuid.New().String()
 	}
 
 	created, err := h.productService.CreateProduct(c.Request.Context(), &product)
@@ -225,9 +225,4 @@ func handleError(c *gin.Context, err error) {
 			Message: err.Error(),
 		})
 	}
-}
-
-// TODO: Implementar UUID generator real
-func generateUUID() string {
-	return "uuid-temp-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 }

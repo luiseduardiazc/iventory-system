@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
+
 	"inventory-system/internal/domain"
 	"inventory-system/internal/repository"
 )
@@ -71,7 +73,7 @@ func (s *ReservationService) CreateReservation(ctx context.Context, productID, s
 	// Crear reserva
 	expiresAt := time.Now().Add(time.Duration(ttlMinutes) * time.Minute)
 	reservation := &domain.Reservation{
-		ID:         generateID(),
+		ID:         uuid.New().String(),
 		ProductID:  productID,
 		StoreID:    storeID,
 		CustomerID: customerID,

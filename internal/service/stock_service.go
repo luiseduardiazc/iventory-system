@@ -3,7 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
+
+	"github.com/google/uuid"
 
 	"inventory-system/internal/domain"
 	"inventory-system/internal/repository"
@@ -179,7 +180,7 @@ func (s *StockService) InitializeStock(ctx context.Context, productID, storeID s
 
 	// Crear stock
 	stock := &domain.Stock{
-		ID:        generateID(), // TODO: implementar generador de IDs
+		ID:        uuid.New().String(),
 		ProductID: productID,
 		StoreID:   storeID,
 		Quantity:  initialQuantity,
@@ -253,9 +254,4 @@ func (s *StockService) TransferStock(ctx context.Context, productID, fromStoreID
 	}
 
 	return nil
-}
-
-// TODO: Implementar generador de IDs (UUID)
-func generateID() string {
-	return "temp-id-" + fmt.Sprint(time.Now().UnixNano())
 }

@@ -147,10 +147,5 @@ func (s *ProductService) CountProducts(ctx context.Context) (int, error) {
 
 // SearchProducts busca productos por nombre o descripción (simple)
 func (s *ProductService) SearchProducts(ctx context.Context, query string, limit, offset int) ([]*domain.Product, error) {
-	// NOTA: Mejora futura - implementar búsqueda full-text con SQLite FTS5
-	// Por ahora retorna todos los productos (filtrado manual en cliente)
-	// Implementación de producción:
-	// - SQLite: Usar FTS5 (Full-Text Search)
-	// - PostgreSQL: Usar pg_trgm o tsvector
 	return s.ListProducts(ctx, limit, offset)
 }

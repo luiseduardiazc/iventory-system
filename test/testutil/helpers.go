@@ -4,18 +4,20 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 var seededRand *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-// GenerateTestID genera un ID único para tests
+// GenerateTestID genera un ID único para tests usando UUID
 func GenerateTestID() string {
-	return fmt.Sprintf("test-%d-%d", time.Now().UnixNano(), seededRand.Intn(10000))
+	return uuid.New().String()
 }
 
 // GenerateTestSKU genera un SKU único para tests
 func GenerateTestSKU() string {
-	return fmt.Sprintf("SKU-TEST-%d", time.Now().UnixNano())
+	return fmt.Sprintf("SKU-TEST-%d-%s", time.Now().UnixNano(), uuid.New().String()[:8])
 }
 
 // GenerateTestStoreID genera un ID de tienda para tests
@@ -42,4 +44,19 @@ func PtrBool(b bool) *bool {
 // PtrTime devuelve un puntero a time.Time
 func PtrTime(t time.Time) *time.Time {
 	return &t
+}
+
+// GenerateSKU genera un SKU único
+func GenerateSKU() string {
+	return fmt.Sprintf("SKU-%s", uuid.New().String()[:13])
+}
+
+// GenerateID genera un ID único
+func GenerateID() string {
+	return uuid.New().String()
+}
+
+// GenerateCustomerID genera un ID de cliente
+func GenerateCustomerID(id int) string {
+	return fmt.Sprintf("customer-%d-%s", id, uuid.New().String()[:8])
 }

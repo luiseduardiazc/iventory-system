@@ -6,6 +6,8 @@ import (
 
 	"inventory-system/internal/domain"
 	"inventory-system/internal/repository"
+
+	"github.com/google/uuid"
 )
 
 // ProductService maneja la lógica de negocio para productos
@@ -27,6 +29,11 @@ func NewProductService(
 
 // CreateProduct crea un nuevo producto
 func (s *ProductService) CreateProduct(ctx context.Context, product *domain.Product) (*domain.Product, error) {
+	// Generar ID si no existe
+	if product.ID == "" {
+		product.ID = uuid.New().String()
+	}
+
 	// Validar producto
 	if err := product.Validate(); err != nil {
 		return nil, err

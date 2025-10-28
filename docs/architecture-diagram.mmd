@@ -1,0 +1,167 @@
+graph TB
+    subgraph "Client Layer"
+        CLI[Client Applications]
+        CURL[cURL / HTTP Clients]
+        UI[Web/Mobile UI]
+    end
+
+    subgraph "API Gateway Layer"
+        GIN[Gin HTTP Server<br/>:8080]
+    end
+
+    subgraph "Middleware Layer"
+        AUTH[Authentication<br/>API Key Validation]
+        LOGGER[Request Logger<br/>JSON/Text Format]
+        RATE[Rate Limiter<br/>100 req/min]
+        CORS[CORS Handler]
+        ERROR[Error Handler]
+    end
+
+    subgraph "Handler Layer"
+        PH[Product Handler<br/>CRUD Operations]
+        SH[Stock Handler<br/>Stock Management]
+        RH[Reservation Handler<br/>Reserve/Confirm/Cancel]
+        HEALTH[Health Check Handler]
+    end
+
+    subgraph "Service Layer"
+        PS[Product Service<br/>Business Logic]
+        SS[Stock Service<br/>Optimistic Locking]
+        RS[Reservation Service<br/>TTL Management]
+        SYNC[Sync Service<br/>Event Processing]
+    end
+
+    subgraph "Event Publishing"
+        EP[EventPublisher<br/>Interface]
+        
+        subgraph "Implementations"
+            REDIS_PUB[Redis Publisher<br/>✅ Implemented]
+            KAFKA_PUB[Kafka Publisher<br/>🔜 Planned]
+            MOCK_PUB[Mock Publisher<br/>✅ Testing]
+            NOOP_PUB[NoOp Publisher<br/>✅ Development]
+        end
+    end
+
+    subgraph "Repository Layer"
+        PR[Product Repository<br/>CRUD + Search]
+        SR[Stock Repository<br/>Version Control]
+        RR[Reservation Repository<br/>Status Management]
+        ER[Event Repository<br/>Event Sourcing]
+    end
+
+    subgraph "Data Layer"
+        SQLITE[(SQLite Database<br/>./inventory.db)]
+        
+        subgraph "Tables"
+            T_PROD[products]
+            T_STOCK[stock]
+            T_RESERV[reservations]
+            T_EVENTS[events]
+        end
+    end
+
+    subgraph "Message Broker Layer"
+        REDIS[Redis Streams<br/>localhost:6379<br/>stream: inventory-events]
+        KAFKA[Apache Kafka<br/>🔜 Future]
+    end
+
+    subgraph "Background Workers"
+        EXP_WORKER[Expiration Worker<br/>Auto-cancel TTL expired<br/>reservations]
+        SYNC_WORKER[Sync Worker<br/>Process events from DB<br/>to ensure consistency]
+    end
+
+    subgraph "Infrastructure"
+        DOCKER[Docker Compose<br/>Redis Container]
+        CONFIG[Config Loader<br/>Environment Variables<br/>.env file]
+    end
+
+    %% Client to API
+    CLI --> GIN
+    CURL --> GIN
+    UI --> GIN
+
+    %% API to Middleware
+    GIN --> AUTH
+    AUTH --> LOGGER
+    LOGGER --> RATE
+    RATE --> CORS
+    CORS --> ERROR
+
+    %% Middleware to Handlers
+    ERROR --> PH
+    ERROR --> SH
+    ERROR --> RH
+    ERROR --> HEALTH
+
+    %% Handlers to Services
+    PH --> PS
+    SH --> SS
+    RH --> RS
+    HEALTH --> PS
+    HEALTH --> SS
+
+    %% Services to Repositories
+    PS --> PR
+    SS --> SR
+    SS --> RR
+    RS --> RR
+    RS --> SR
+
+    %% Services to Event Publisher
+    PS --> EP
+    SS --> EP
+    RS --> EP
+
+    %% Event Publisher to Implementations
+    EP -.-> REDIS_PUB
+    EP -.-> KAFKA_PUB
+    EP -.-> MOCK_PUB
+    EP -.-> NOOP_PUB
+
+    %% Event Publisher to Message Brokers
+    REDIS_PUB --> REDIS
+    KAFKA_PUB -.-> KAFKA
+
+    %% Services to Event Repository
+    PS --> ER
+    SS --> ER
+    RS --> ER
+
+    %% Repositories to Database
+    PR --> SQLITE
+    SR --> SQLITE
+    RR --> SQLITE
+    ER --> SQLITE
+
+    %% Database Tables
+    SQLITE --> T_PROD
+    SQLITE --> T_STOCK
+    SQLITE --> T_RESERV
+    SQLITE --> T_EVENTS
+
+    %% Background Workers
+    EXP_WORKER --> RR
+    EXP_WORKER --> EP
+    SYNC_WORKER --> ER
+    SYNC_WORKER --> EP
+
+    %% Infrastructure
+    CONFIG --> GIN
+    DOCKER --> REDIS
+
+    %% Sync Service
+    SYNC --> ER
+    SYNC --> EP
+
+    %% Styling
+    classDef implemented fill:#90EE90,stroke:#006400,stroke-width:2px
+    classDef planned fill:#FFD700,stroke:#FF8C00,stroke-width:2px
+    classDef infrastructure fill:#87CEEB,stroke:#4682B4,stroke-width:2px
+    classDef database fill:#DDA0DD,stroke:#8B008B,stroke-width:2px
+    classDef worker fill:#FFA07A,stroke:#DC143C,stroke-width:2px
+
+    class REDIS_PUB,MOCK_PUB,NOOP_PUB,REDIS implemented
+    class KAFKA_PUB,KAFKA planned
+    class DOCKER,CONFIG infrastructure
+    class SQLITE,T_PROD,T_STOCK,T_RESERV,T_EVENTS database
+    class EXP_WORKER,SYNC_WORKER worker

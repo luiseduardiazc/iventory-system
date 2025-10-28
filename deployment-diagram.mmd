@@ -1,0 +1,105 @@
+graph TB
+    subgraph "Development Environment"
+        subgraph "Local Machine"
+            DEV_CODE[Source Code<br/>Go 1.21+]
+            DEV_ENV[.env Configuration<br/>DATABASE_DRIVER=sqlite<br/>MESSAGE_BROKER=redis<br/>SERVER_PORT=8080]
+            DEV_BIN[Compiled Binary<br/>inventory-api<br/>19 MB]
+        end
+
+        subgraph "Docker Compose Infrastructure"
+            DOCKER_REDIS[Redis Container<br/>redis:7-alpine<br/>Port: 6379<br/>Stream: inventory-events]
+        end
+
+        DEV_CODE -->|go build| DEV_BIN
+        DEV_ENV --> DEV_BIN
+        DEV_BIN -->|connects to| DOCKER_REDIS
+        DEV_BIN -->|creates| DEV_SQLITE
+        
+        DEV_SQLITE[(SQLite File<br/>./inventory.db<br/>~500 KB)]
+    end
+
+    subgraph "Testing Environment"
+        TEST_CODE[Test Suite<br/>74 Tests]
+        TEST_MOCK[Mock Publisher<br/>In-Memory Events]
+        TEST_DB[(SQLite :memory:<br/>Ephemeral DB)]
+        
+        TEST_CODE --> TEST_MOCK
+        TEST_CODE --> TEST_DB
+    end
+
+    subgraph "Production Environment (Example)"
+        subgraph "Application Server"
+            PROD_APP[Inventory API<br/>Binary Executable<br/>Multiple Instances]
+            PROD_CONFIG[Environment Config<br/>DATABASE_DRIVER=sqlite<br/>MESSAGE_BROKER=redis<br/>LOG_LEVEL=info<br/>LOG_FORMAT=json]
+            PROD_DB[(SQLite Database<br/>Persistent Volume<br/>/data/inventory.db)]
+        end
+
+        subgraph "Message Broker Cluster"
+            REDIS_MASTER[Redis Master<br/>Primary Node]
+            REDIS_REPLICA1[Redis Replica 1]
+            REDIS_REPLICA2[Redis Replica 2]
+        end
+
+        subgraph "Monitoring & Observability"
+            LOGS[Application Logs<br/>JSON Format<br/>stdout/stderr]
+            METRICS[Prometheus Metrics<br/>🔜 Planned]
+            TRACES[Distributed Tracing<br/>🔜 Planned]
+        end
+
+        PROD_CONFIG --> PROD_APP
+        PROD_APP -->|writes| PROD_DB
+        PROD_APP -->|publishes| REDIS_MASTER
+        REDIS_MASTER -->|replicates| REDIS_REPLICA1
+        REDIS_MASTER -->|replicates| REDIS_REPLICA2
+        PROD_APP -->|emits| LOGS
+        PROD_APP -.->|future| METRICS
+        PROD_APP -.->|future| TRACES
+    end
+
+    subgraph "Client Applications"
+        WEB[Web Application<br/>React/Vue/Angular]
+        MOBILE[Mobile App<br/>iOS/Android]
+        API_CLIENT[API Clients<br/>cURL/Postman/SDKs]
+        OTHER_SERVICE[Other Microservices<br/>Consume Events]
+    end
+
+    WEB -->|HTTPS| PROD_APP
+    MOBILE -->|HTTPS| PROD_APP
+    API_CLIENT -->|HTTP/HTTPS| PROD_APP
+    REDIS_MASTER -->|streams| OTHER_SERVICE
+
+    subgraph "Deployment Options"
+        OPT1[Option 1: Single Binary<br/>./inventory-api<br/>+ SQLite file<br/>+ Redis connection]
+        OPT2[Option 2: Docker Container<br/>FROM golang:1.21-alpine<br/>COPY binary<br/>EXPOSE 8080]
+        OPT3[Option 3: Kubernetes<br/>Deployment + Service<br/>+ ConfigMap + PersistentVolume]
+    end
+
+    subgraph "Configuration Files"
+        DOCKER_COMPOSE[docker-compose.yml<br/>- Redis service<br/>- Network config<br/>- Volume mounts]
+        ENV_FILE[.env.example<br/>- DATABASE_DRIVER<br/>- MESSAGE_BROKER<br/>- REDIS_HOST<br/>- SERVER_PORT]
+        MIGRATIONS[migrations/<br/>001_initial_schema.sql<br/>SQLite compatible]
+    end
+
+    DOCKER_COMPOSE -.->|defines| DOCKER_REDIS
+    ENV_FILE -.->|template for| DEV_ENV
+    MIGRATIONS -.->|applied to| DEV_SQLITE
+
+    %% Styling
+    classDef development fill:#E8F5E9,stroke:#4CAF50,stroke-width:2px
+    classDef testing fill:#FFF9C4,stroke:#FBC02D,stroke-width:2px
+    classDef production fill:#E3F2FD,stroke:#2196F3,stroke-width:2px
+    classDef infrastructure fill:#FFE0B2,stroke:#FF9800,stroke-width:2px
+    classDef client fill:#F3E5F5,stroke:#9C27B0,stroke-width:2px
+    classDef config fill:#FCE4EC,stroke:#E91E63,stroke-width:2px
+
+    class DEV_CODE,DEV_ENV,DEV_BIN,DEV_SQLITE,DOCKER_REDIS development
+    class TEST_CODE,TEST_MOCK,TEST_DB testing
+    class PROD_APP,PROD_CONFIG,PROD_DB,REDIS_MASTER,REDIS_REPLICA1,REDIS_REPLICA2,LOGS production
+    class OPT1,OPT2,OPT3 infrastructure
+    class WEB,MOBILE,API_CLIENT,OTHER_SERVICE client
+    class DOCKER_COMPOSE,ENV_FILE,MIGRATIONS config
+
+    %% Notes
+    note1[Portable Deployment:<br/>Single binary + SQLite<br/>No external DB needed]
+    note2[Horizontal Scaling:<br/>Multiple API instances<br/>share Redis + SQLite volume]
+    note3[Zero Downtime:<br/>Graceful shutdown<br/>Connection draining]

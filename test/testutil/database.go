@@ -64,10 +64,9 @@ func SetupTestDB(t *testing.T) *sql.DB {
 		event_type TEXT NOT NULL,
 		aggregate_type TEXT NOT NULL,
 		aggregate_id TEXT NOT NULL,
-		data TEXT NOT NULL,
-		metadata TEXT,
-		synced BOOLEAN NOT NULL DEFAULT 0,
-		synced_at DATETIME,
+		store_id TEXT NOT NULL,
+		payload TEXT NOT NULL,
+		synced INTEGER NOT NULL DEFAULT 0,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 

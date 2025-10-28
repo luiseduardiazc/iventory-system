@@ -92,13 +92,24 @@ MESSAGE_BROKER=none
 
 Ver [ARQUITECTURA_EVENTOS.md](ARQUITECTURA_EVENTOS.md) para detalles completos.
 
-## 🚀 Quick Start
+## � Diagramas de Arquitectura
+
+El proyecto incluye **5 diagramas profesionales** en formato Mermaid, listos para importar en [MermaidChart.com](https://www.mermaidchart.com/):
+
+1. **[architecture-diagram.mmd](architecture-diagram.mmd)** - Vista general completa del sistema
+2. **[event-flow-diagram.mmd](event-flow-diagram.mmd)** - Flujos de eventos y secuencias
+3. **[layered-architecture-diagram.mmd](layered-architecture-diagram.mmd)** - Arquitectura en 7 capas
+4. **[event-publisher-class-diagram.mmd](event-publisher-class-diagram.mmd)** - Patrón de diseño Event Publisher
+5. **[deployment-diagram.mmd](deployment-diagram.mmd)** - Opciones de despliegue
+
+📖 **Ver [DIAGRAMAS.md](DIAGRAMAS.md)** para instrucciones detalladas de uso e importación.
+
+## �🚀 Quick Start
 
 ### Prerrequisitos
 
 - Go 1.21+ ([Descargar aquí](https://golang.org/dl/))
 - Docker y Docker Compose (opcional, para infraestructura)
-- Make (opcional, pero recomendado)
 
 ### Instalación
 

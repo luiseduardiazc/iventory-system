@@ -11,9 +11,6 @@ import (
 // EventSyncService maneja la sincronización de eventos con message brokers
 type EventSyncService struct {
 	eventRepo *repository.EventRepository
-	// NOTA: Los message brokers se configuran mediante EventPublisher.
-	// En producción, se puede usar Redis Streams, Kafka, o cualquier broker
-	// compatible. Ver ARQUITECTURA_EVENTOS.md para más detalles.
 }
 
 // NewEventSyncService crea una nueva instancia del servicio

@@ -9,9 +9,27 @@ Esta guía explica cómo ejecutar el proyecto en **cualquier sistema operativo**
 Antes de ejecutar el proyecto, asegúrate de tener instalado:
 
 **Go 1.21 o superior**
-- Windows: Descargar desde [golang.org/dl](https://golang.org/dl/)
-- Linux: `sudo apt install golang-go` o `sudo yum install golang`
-- macOS: `brew install go`
+
+- **Windows**: Descargar desde [golang.org/dl](https://golang.org/dl/)
+
+- **Linux (Ubuntu/Debian)**: 
+  ```bash
+  # Remover versión antigua si existe
+  sudo apt remove golang-go
+  
+  # Descargar Go 1.21+ (verificar última versión en golang.org/dl)
+  wget https://go.dev/dl/go1.21.6.linux-amd64.tar.gz
+  
+  # Extraer en /usr/local
+  sudo rm -rf /usr/local/go
+  sudo tar -C /usr/local -xzf go1.21.6.linux-amd64.tar.gz
+  
+  # Agregar al PATH (añadir a ~/.bashrc o ~/.profile)
+  echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+  source ~/.bashrc
+  ```
+
+- **macOS**: `brew install go`
 
 Verificar instalación:
 ```bash
@@ -114,31 +132,6 @@ go build -o bin/inventory-api cmd/api/main.go
 - ✅ Más rápido (sin recompilación)
 - ✅ Binario portable
 - ✅ Listo para despliegue
-
----
-
-### Opción 3: Con Makefile (Linux/macOS)
-
-Si tienes `make` instalado:
-
-```bash
-# Instalar dependencias
-make deps
-
-# Compilar
-make build
-
-# Ejecutar
-make run
-
-# Tests
-make test
-```
-
-**Windows**: Instalar `make` con [Chocolatey](https://chocolatey.org/):
-```powershell
-choco install make
-```
 
 ---
 
@@ -491,7 +484,6 @@ inventory-system/
 ├── go.mod                 # Dependencias de Go
 ├── go.sum                 # Checksums de dependencias
 ├── .env.example          # Ejemplo de configuración
-├── Makefile              # Comandos útiles (opcional)
 ├── docker-compose.yml    # Infraestructura Docker (opcional)
 ├── README.md             # Documentación principal
 ├── run.md                # Esta guía

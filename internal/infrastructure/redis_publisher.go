@@ -14,17 +14,6 @@ import (
 
 // RedisPublisher implementa EventPublisher usando Redis Streams.
 // Redis Streams es una opción ligera y rápida para pub/sub con persistencia.
-//
-// Características:
-//   - Latencia baja (~1-5ms)
-//   - Setup simple (1 contenedor Docker)
-//   - Consumer groups nativos
-//   - Retención configurable de mensajes
-//
-// Ideal para:
-//   - Prototipos y MVPs
-//   - Sistemas pequeños/medianos (<10k eventos/segundo)
-//   - Cuando ya usas Redis para cache
 type RedisPublisher struct {
 	client     *redis.Client
 	streamName string

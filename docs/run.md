@@ -40,9 +40,9 @@ go version
 
 **Salida esperada**: `go version go1.21.0` (o superior)
 
-### Opcional (para Event Publishing)
+### Requerido (para Event Publishing)
 
-**Docker** (solo si quieres publicar eventos a servicios externos con Redis Streams)
+**Docker** (necesario para ejecutar Redis, que es el message broker por defecto)
 
 - **Windows/macOS**: Descargar [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - **Linux (Ubuntu/Debian)**:
@@ -62,7 +62,7 @@ docker --version
 
 **Salida esperada**: `Docker version 24.0.0` (o superior)
 
-**Nota**: Redis/Docker NO es obligatorio. El servidor funciona perfectamente sin él.
+**Nota importante**: El sistema está configurado para usar Redis por defecto (`MESSAGE_BROKER=redis`). Si no quieres usar Redis, debes configurar explícitamente `MESSAGE_BROKER=none` en las variables de entorno (ver sección "Ejecutar sin Redis").
 
 ---
 
@@ -100,24 +100,46 @@ go mod download
 
 ## ▶️ Ejecución del Proyecto
 
+### ⚠️ IMPORTANTE: Iniciar Redis primero
+
+El sistema usa Redis como message broker por defecto. **Debes iniciar Redis antes de ejecutar el servidor**:
+
+```bash
+# Iniciar Redis con Docker (desde el directorio del proyecto)
+docker-compose up -d redis
+```
+
+**Verificar que Redis está corriendo:**
+```bash
+docker ps
+```
+
+**Deberías ver**:
+```
+CONTAINER ID   IMAGE            STATUS         PORTS                    NAMES
+abc123def456   redis:7-alpine   Up 10 seconds  0.0.0.0:6379->6379/tcp   inventory-redis
+```
+
 ### Opción 1: Ejecución Directa (Modo Desarrollo)
 
-La forma más rápida de ejecutar el proyecto:
+Una vez Redis está corriendo, ejecuta el proyecto:
 
 ```bash
 go run cmd/api/main.go
 ```
 
-**Salida esperada**:
+**Salida esperada (con Redis)**:
 ```
-2025/10/26 15:30:00 ✅ Connected to SQLite database: :memory:
-2025/10/26 15:30:00 📊 Applying database migrations...
-2025/10/26 15:30:00 ✅ Database migrations applied successfully
-2025/10/26 15:30:00 ⏰ Reservation expiration worker started
-2025/10/26 15:30:00 📡 Event synchronization worker started
-2025/10/26 15:30:00 🚀 Server starting on port 8080 (instance: api-001)
-2025/10/26 15:30:00 🔒 API Keys loaded: 3
-2025/10/26 15:30:00 🌐 API available at http://localhost:8080/api/v1
+2025/10/28 15:30:00 ✅ Connected to SQLite database: :memory:
+2025/10/28 15:30:00 📊 Applying database migrations...
+2025/10/28 15:30:00 ✅ Database migrations applied successfully
+2025/10/28 15:30:00 ✅ Connected to Redis at localhost:6379 (stream: inventory-events)
+2025/10/28 15:30:00 ✅ Using Redis Streams as message broker (localhost:6379)
+2025/10/28 15:30:00 ⏰ Reservation expiration worker started
+2025/10/28 15:30:00 📡 Event synchronization worker started
+2025/10/28 15:30:00 🚀 Server starting on port 8080 (instance: api-001)
+2025/10/28 15:30:00 🔒 API Keys loaded: 3
+2025/10/28 15:30:00 🌐 API available at http://localhost:8080/api/v1
 ```
 
 ---
@@ -564,17 +586,44 @@ REDIS_MAX_LEN=100000                # Retener últimos 100k eventos
 
 ### ❌ Ejecutar sin Redis (Modo Standalone)
 
-Si no necesitas publicar eventos a servicios externos, puedes ejecutar sin Redis:
+Si no quieres usar Redis/Docker, puedes ejecutar sin el message broker:
 
-1. **Opción 1**: No configurar MESSAGE_BROKER (el servidor funcionará normalmente)
-   ```bash
-   go run cmd/api/main.go
-   ```
+**IMPORTANTE**: Debes configurar explícitamente `MESSAGE_BROKER=none`, de lo contrario el servidor intentará conectar a Redis y fallará.
 
-2. **Opción 2**: Deshabilitar explícitamente en `.env`
-   ```bash
-   MESSAGE_BROKER=none
-   ```
+#### Opción 1: Variable de entorno (recomendado)
+
+```bash
+# Windows PowerShell
+$env:MESSAGE_BROKER="none"; go run cmd/api/main.go
+
+# Linux/macOS
+MESSAGE_BROKER=none go run cmd/api/main.go
+```
+
+#### Opción 2: Archivo .env
+
+Crear o editar `.env`:
+```bash
+MESSAGE_BROKER=none
+```
+
+Luego ejecutar:
+```bash
+go run cmd/api/main.go
+```
+
+**Salida esperada (sin Redis)**:
+```
+2025/10/28 15:30:00 ✅ Connected to SQLite database: :memory:
+2025/10/28 15:30:00 📊 Applying database migrations...
+2025/10/28 15:30:00 ✅ Database migrations applied successfully
+2025/10/28 15:30:00 ⚠️  No message broker configured (MESSAGE_BROKER=none)
+2025/10/28 15:30:00 ⏰ Reservation expiration worker started
+2025/10/28 15:30:00 📡 Event synchronization worker started
+2025/10/28 15:30:00 🚀 Server starting on port 8080 (instance: api-001)
+2025/10/28 15:30:00 🔒 API Keys loaded: 3
+2025/10/28 15:30:00 🌐 API available at http://localhost:8080/api/v1
+```
 
 **Nota**: Sin Redis, el sistema funciona perfectamente pero NO publica eventos a servicios externos. Los eventos se siguen guardando en la base de datos para auditoría.
 
@@ -623,6 +672,40 @@ Stop-Process -Name "inventory-api"  # Windows
 ---
 
 ## 🐛 Troubleshooting
+
+### Error: "redis: connection pool: failed to dial"
+
+**Error completo**:
+```
+redis: connection pool: failed to dial after 5 attempts: dial tcp [::1]:6379: connectex: No connection could be made because the target machine actively refused it.
+Failed to initialize event publisher: failed to create Redis publisher
+```
+
+**Causa**: El servidor está configurado para usar Redis (`MESSAGE_BROKER=redis` por defecto) pero Redis no está corriendo.
+
+**Soluciones**:
+
+1. **Opción A - Iniciar Redis** (recomendado):
+   ```bash
+   docker-compose up -d redis
+   ```
+
+2. **Opción B - Deshabilitar Redis**:
+   ```bash
+   # Windows PowerShell
+   $env:MESSAGE_BROKER="none"; go run cmd/api/main.go
+   
+   # Linux/macOS
+   MESSAGE_BROKER=none go run cmd/api/main.go
+   ```
+
+3. **Opción C - Configurar en .env**:
+   Crear `.env`:
+   ```
+   MESSAGE_BROKER=none
+   ```
+
+---
 
 ### Error: "Port 8080 already in use"
 
@@ -693,13 +776,16 @@ SERVER_PORT=8081
 | **Extraer ZIP** | `Expand-Archive inventory-system.zip` | `unzip inventory-system.zip` |
 | **Navegar** | `cd inventory-system` | `cd inventory-system` |
 | **Dependencias** | `go mod download` | `go mod download` |
-| **Iniciar Redis** | `docker-compose up -d redis` | `docker-compose up -d redis` |
+| **Iniciar Redis** ⚠️ | `docker-compose up -d redis` | `docker-compose up -d redis` |
 | **Ejecutar** | `go run cmd/api/main.go` | `go run cmd/api/main.go` |
+| **Ejecutar sin Redis** | `$env:MESSAGE_BROKER="none"; go run cmd/api/main.go` | `MESSAGE_BROKER=none go run cmd/api/main.go` |
 | **Compilar** | `go build -o bin/inventory-api.exe cmd/api/main.go` | `go build -o bin/inventory-api cmd/api/main.go` |
 | **Tests** | `go test ./... -v` | `go test ./... -v` |
 | **Health Check** | `Invoke-RestMethod http://localhost:8080/health` | `curl http://localhost:8080/health` |
 | **Detener Servidor** | `Ctrl + C` | `Ctrl + C` |
 | **Detener Redis** | `docker-compose down` | `docker-compose down` |
+
+⚠️ **Redis es REQUERIDO por defecto**. Si no quieres usarlo, configura `MESSAGE_BROKER=none`.
 
 ---
 
@@ -707,9 +793,24 @@ SERVER_PORT=8081
 
 Si ves estos mensajes, el proyecto está funcionando correctamente:
 
+**Con Redis (configuración por defecto):**
 ```
 ✅ Connected to SQLite database
 ✅ Database migrations applied successfully
+✅ Connected to Redis at localhost:6379 (stream: inventory-events)
+✅ Using Redis Streams as message broker (localhost:6379)
+⏰ Reservation expiration worker started
+📡 Event synchronization worker started
+🚀 Server starting on port 8080
+🔒 API Keys loaded: 3
+🌐 API available at http://localhost:8080/api/v1
+```
+
+**Sin Redis (MESSAGE_BROKER=none):**
+```
+✅ Connected to SQLite database
+✅ Database migrations applied successfully
+⚠️  No message broker configured (MESSAGE_BROKER=none)
 ⏰ Reservation expiration worker started
 📡 Event synchronization worker started
 🚀 Server starting on port 8080
@@ -758,7 +859,7 @@ cd inventory-system
 # 3. Descargar dependencias
 go mod download
 
-# 4. (OPCIONAL) Iniciar Redis para Event Publishing
+# 4. Iniciar Redis (REQUERIDO por defecto)
 docker-compose up -d redis
 
 # 5. Ejecutar
@@ -770,7 +871,14 @@ curl http://localhost:8080/health
 
 **Tiempo total**: ~3-5 minutos (incluyendo descarga de dependencias)
 
-**Nota**: Redis es opcional. El servidor funciona perfectamente sin él en modo standalone.
+**Alternativa sin Docker/Redis**: Si no quieres usar Docker, configura `MESSAGE_BROKER=none`:
+```bash
+# Windows PowerShell
+$env:MESSAGE_BROKER="none"; go run cmd/api/main.go
+
+# Linux/macOS
+MESSAGE_BROKER=none go run cmd/api/main.go
+```
 
 ---
 

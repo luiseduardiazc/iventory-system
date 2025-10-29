@@ -224,7 +224,36 @@ curl http://localhost:8080/health
 
 ## 📚 Documentación
 
+### 📖 Guías de Usuario
 
+- **[Guía de Ejecución](docs/run.md)** - Instrucciones completas para ejecutar el sistema (desarrollo y producción)
+- **[Arquitectura del Sistema](docs/ARCHITECTURE.md)** - Descripción detallada de la arquitectura event-driven
+
+### 🔄 Sistema de Resiliencia
+
+- **[Event Sync Resilience](docs/EVENT_SYNC_RESILIENCE.md)** - Guía completa del mecanismo de re-intentos automáticos
+- **[Implementación Event Sync](docs/IMPLEMENTACION_EVENT_SYNC_COMPLETA.md)** - Resumen de la implementación del sistema de resiliencia
+
+### 📊 Diagramas de Arquitectura
+
+#### Diagramas Principales
+- **[Diagrama de Arquitectura](docs/architecture-diagram.mmd)** - Vista completa del sistema (técnico y negocio)
+- **[Diagrama de Negocio](docs/business-architecture-diagram.mmd)** - Vista ejecutiva simplificada
+- **[Diagrama de Flujo de Valor](docs/value-flow-diagram.mmd)** - Customer journey y procesos
+
+#### Diagramas de Resiliencia
+- **[Flujo de Resiliencia](docs/resilience-flow-diagram.mmd)** - Secuencia de re-intentos automáticos ([PNG](docs/resilience-flow-diagram.png))
+- **[Flujo de Valor](docs/value-flow-diagram.mmd)** - Journey del cliente ([PNG](docs/value-flow-diagram.png))
+
+> 💡 **Tip**: Los archivos `.mmd` se pueden visualizar en [mermaid.live](https://mermaid.live/) o con extensiones de VS Code
+
+### 🎯 Para Comenzar
+
+1. **Primera vez**: Lee [run.md](docs/run.md) para configurar el entorno
+2. **Arquitectura**: Revisa [ARCHITECTURE.md](docs/ARCHITECTURE.md) para entender el diseño
+3. **Resiliencia**: Consulta [EVENT_SYNC_RESILIENCE.md](docs/EVENT_SYNC_RESILIENCE.md) para el sistema de eventos
+
+---
 
 **Implementado:**
 - ✅ **EventPublisher Interface** - Abstracción para brokers intercambiables

@@ -226,8 +226,7 @@ curl http://localhost:8080/health
 
 ### 📖 Guías de Usuario
 
-- **[Guía de Ejecución](docs/run.md)** - Instrucciones completas para ejecutar el sistema (desarrollo y producción)
-- **[Arquitectura del Sistema](docs/ARCHITECTURE.md)** - Descripción detallada de la arquitectura event-driven
+- **[Guía de Ejecución](docs/run.md)** - Instrucciones completas para ejecutar el sistema
 
 ### 🔄 Sistema de Resiliencia
 

@@ -1,7 +1,7 @@
 ---
 title: Flujo de Valor - Venta de Producto
 ---
-graph TB
+flowchart TB
     START(["🛒 INICIO: Cliente quiere comprar"])
     
     %% Paso 1: Verificación
@@ -73,7 +73,7 @@ graph TB
     classDef error fill:#F44336,stroke:#C62828,stroke-width:3px,color:#fff
     classDef notification fill:#9C27B0,stroke:#6A1B9A,stroke-width:3px,color:#fff
     classDef note fill:#FFE082,stroke:#F57C00,stroke-width:2px,color:#000
-    classDef end fill:#4CAF50,stroke:#2E7D32,stroke-width:4px,color:#fff
+    classDef endNode fill:#4CAF50,stroke:#2E7D32,stroke-width:4px,color:#fff
     
     class START start
     class STEP1,STEP2,STEP3,STEP4 process
@@ -81,4 +81,4 @@ graph TB
     class CANCEL,NO_STOCK,EXPIRE error
     class STEP5 notification
     class NOTE1,NOTE2 note
-    class END,END_CANCEL end
+    class END,END_CANCEL endNode

@@ -13,7 +13,6 @@ Prototipo de sistema de gestión de inventario distribuido que optimiza la consi
 - **Message Broker Flexible**: Arquitectura desacoplada que permite cambiar de Redis a Kafka sin modificar código de negocio
 - **Optimistic Locking**: Previene overselling manteniendo alta disponibilidad
 - **Reservas con TTL**: Auto-expiración de reservas para liberar stock automáticamente
-- **SQLite Database**: Base de datos ligera y embebida para desarrollo y producción
 - **Event Sourcing**: Auditoría completa de eventos en base de datos + publicación en tiempo real
 - **Arquitectura SOLID**: Dependency Inversion Principle para escalabilidad y mantenibilidad
 

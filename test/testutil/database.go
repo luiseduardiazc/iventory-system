@@ -11,10 +11,14 @@ import (
 func SetupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 
-	db, err := sql.Open("sqlite", ":memory:")
+	// Usar file::memory:?cache=shared para soportar concurrencia en tests
+	db, err := sql.Open("sqlite", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("Failed to open test database: %v", err)
 	}
+
+	// Configurar para soportar concurrencia
+	db.SetMaxOpenConns(1) // SQLite solo soporta 1 conexión de escritura
 
 	// Aplicar schema
 	schema := `
@@ -24,7 +28,7 @@ func SetupTestDB(t *testing.T) *sql.DB {
 		name TEXT NOT NULL,
 		description TEXT,
 		category TEXT,
-		price REAL NOT NULL,
+		price REAL NOT NULL CHECK (price >= 0),
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
@@ -33,15 +37,16 @@ func SetupTestDB(t *testing.T) *sql.DB {
 		id TEXT PRIMARY KEY,
 		product_id TEXT NOT NULL,
 		store_id TEXT NOT NULL,
-		quantity INTEGER NOT NULL DEFAULT 0,
-		reserved INTEGER NOT NULL DEFAULT 0,
+		quantity INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+		reserved INTEGER NOT NULL DEFAULT 0 CHECK (reserved >= 0),
 		min_stock INTEGER NOT NULL DEFAULT 0,
 		max_stock INTEGER NOT NULL DEFAULT 0,
 		version INTEGER NOT NULL DEFAULT 1,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		UNIQUE(product_id, store_id),
-		FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+		FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+		CHECK (reserved <= quantity)
 	);
 
 	CREATE TABLE IF NOT EXISTS reservations (
@@ -49,7 +54,7 @@ func SetupTestDB(t *testing.T) *sql.DB {
 		product_id TEXT NOT NULL,
 		store_id TEXT NOT NULL,
 		customer_id TEXT NOT NULL,
-		quantity INTEGER NOT NULL,
+		quantity INTEGER NOT NULL CHECK (quantity > 0),
 		status TEXT NOT NULL CHECK(status IN ('PENDING', 'CONFIRMED', 'CANCELLED', 'EXPIRED')),
 		reference_id TEXT,
 		expires_at DATETIME NOT NULL,
@@ -67,16 +72,24 @@ func SetupTestDB(t *testing.T) *sql.DB {
 		store_id TEXT NOT NULL,
 		payload TEXT NOT NULL,
 		synced INTEGER NOT NULL DEFAULT 0,
+		synced_at TIMESTAMP NULL,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 
 	-- Índices para optimización
+	CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
+	CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 	CREATE INDEX IF NOT EXISTS idx_stock_product_store ON stock(product_id, store_id);
 	CREATE INDEX IF NOT EXISTS idx_stock_store ON stock(store_id);
+	CREATE INDEX IF NOT EXISTS idx_stock_product ON stock(product_id);
+	CREATE INDEX IF NOT EXISTS idx_reservations_store ON reservations(store_id);
+	CREATE INDEX IF NOT EXISTS idx_reservations_customer ON reservations(customer_id);
 	CREATE INDEX IF NOT EXISTS idx_reservations_status ON reservations(status);
 	CREATE INDEX IF NOT EXISTS idx_reservations_product_store ON reservations(product_id, store_id);
+	CREATE INDEX IF NOT EXISTS idx_events_type_created ON events(event_type, created_at);
+	CREATE INDEX IF NOT EXISTS idx_events_store ON events(store_id);
+	CREATE INDEX IF NOT EXISTS idx_events_aggregate ON events(aggregate_id);
 	CREATE INDEX IF NOT EXISTS idx_events_synced ON events(synced);
-	CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 
 	-- Datos de ejemplo para tests
 	INSERT INTO products (id, sku, name, description, category, price) VALUES

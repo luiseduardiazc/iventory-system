@@ -3,6 +3,7 @@ package mocks
 import (
 	"context"
 	"errors"
+	"log"
 	"sync"
 
 	"inventory-system/internal/domain"
@@ -139,4 +140,31 @@ func (m *MockPublisher) Count() int {
 	defer m.mu.Unlock()
 
 	return len(m.PublishedEvents)
+}
+
+// NoOpPublisher es una implementación de EventPublisher que no hace nada.
+// Útil para testing y desarrollo cuando no se necesita publicación real de eventos.
+type NoOpPublisher struct{}
+
+// NewNoOpPublisher crea una nueva instancia de NoOpPublisher
+func NewNoOpPublisher() *NoOpPublisher {
+	return &NoOpPublisher{}
+}
+
+// Publish no hace nada, solo registra el evento en logs
+func (p *NoOpPublisher) Publish(ctx context.Context, event *domain.Event) error {
+	log.Printf("[NoOp] Event would be published: type=%s, store=%s, id=%s",
+		event.EventType, event.StoreID, event.ID)
+	return nil
+}
+
+// PublishBatch no hace nada para múltiples eventos
+func (p *NoOpPublisher) PublishBatch(ctx context.Context, events []*domain.Event) error {
+	log.Printf("[NoOp] Batch of %d events would be published", len(events))
+	return nil
+}
+
+// Close no hace nada
+func (p *NoOpPublisher) Close() error {
+	return nil
 }

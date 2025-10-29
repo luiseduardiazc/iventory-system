@@ -2,6 +2,8 @@ package domain
 
 import (
 	"encoding/json"
+	"fmt"
+	"sync/atomic"
 	"time"
 )
 
@@ -180,9 +182,15 @@ func NewReservationExpiredEvent(reservationID, productID, storeID string, quanti
 	}
 }
 
-// generateEventID genera un ID único para eventos
-// NOTA: Implementación simplificada para prototipo
-// En producción se recomienda usar UUID v7 (time-ordered) o ULID
+// Contador atómico para garantizar unicidad en IDs de eventos
+var eventIDCounter uint64
+
+// generateEventID genera un ID único para eventos usando timestamp + nanosegundos + contador atómico
 func generateEventID() string {
-	return "evt-" + time.Now().Format("20060102150405") + "-temp"
+	now := time.Now()
+	counter := atomic.AddUint64(&eventIDCounter, 1)
+	return fmt.Sprintf("evt-%s-%d-%d",
+		now.Format("20060102150405"),
+		now.Nanosecond(),
+		counter)
 }

@@ -19,6 +19,7 @@ import (
 	"inventory-system/internal/middleware"
 	"inventory-system/internal/repository"
 	"inventory-system/internal/service"
+	"inventory-system/test/mocks"
 
 	"github.com/gin-gonic/gin"
 )
@@ -212,28 +213,11 @@ func initializeEventPublisher(cfg *config.Config) (domain.EventPublisher, error)
 	case "none", "":
 		// No publisher (solo logging)
 		log.Printf("⚠️  No message broker configured (MESSAGE_BROKER=none)")
-		return &noOpPublisher{}, nil
+		return mocks.NewNoOpPublisher(), nil
 
 	default:
 		return nil, fmt.Errorf("unknown message broker: %s (options: redis, kafka, none)", broker)
 	}
-}
-
-// noOpPublisher es un publisher que no hace nada (para cuando MESSAGE_BROKER=none)
-type noOpPublisher struct{}
-
-func (n *noOpPublisher) Publish(ctx context.Context, event *domain.Event) error {
-	log.Printf("📝 [NO-OP] Would publish event: type=%s, store=%s", event.EventType, event.StoreID)
-	return nil
-}
-
-func (n *noOpPublisher) PublishBatch(ctx context.Context, events []*domain.Event) error {
-	log.Printf("📝 [NO-OP] Would publish batch: %d events", len(events))
-	return nil
-}
-
-func (n *noOpPublisher) Close() error {
-	return nil
 }
 
 // startReservationExpirationWorker worker para expirar reservas

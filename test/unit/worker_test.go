@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"inventory-system/internal/domain"
-	"inventory-system/internal/infrastructure"
 	"inventory-system/internal/repository"
 	"inventory-system/internal/service"
+	"inventory-system/test/mocks"
 	"inventory-system/test/testutil"
 )
 
@@ -20,7 +20,7 @@ func TestReservationService_ExpirationWorker(t *testing.T) {
 	stockRepo := repository.NewStockRepository(db)
 	productRepo := repository.NewProductRepository(db)
 	eventRepo := repository.NewEventRepository(db)
-	publisher := infrastructure.NewNoOpPublisher()
+	publisher := mocks.NewNoOpPublisher()
 
 	reservationService := service.NewReservationService(
 		reservationRepo,

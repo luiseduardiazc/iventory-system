@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"inventory-system/internal/domain"
-	"inventory-system/internal/infrastructure"
 	"inventory-system/internal/repository"
 	"inventory-system/internal/service"
+	"inventory-system/test/mocks"
 	"inventory-system/test/testutil"
 )
 
@@ -18,7 +18,7 @@ func TestStockService_InitializeStock(t *testing.T) {
 	stockRepo := repository.NewStockRepository(db)
 	productRepo := repository.NewProductRepository(db)
 	eventRepo := repository.NewEventRepository(db)
-	publisher := infrastructure.NewNoOpPublisher()
+	publisher := mocks.NewNoOpPublisher()
 	stockService := service.NewStockService(stockRepo, productRepo, eventRepo, publisher)
 
 	ctx := context.Background()
@@ -79,7 +79,7 @@ func TestStockService_UpdateStock(t *testing.T) {
 	stockRepo := repository.NewStockRepository(db)
 	productRepo := repository.NewProductRepository(db)
 	eventRepo := repository.NewEventRepository(db)
-	publisher := infrastructure.NewNoOpPublisher()
+	publisher := mocks.NewNoOpPublisher()
 	stockService := service.NewStockService(stockRepo, productRepo, eventRepo, publisher)
 
 	ctx := context.Background()
@@ -188,7 +188,7 @@ func TestStockService_AdjustStock(t *testing.T) {
 	stockRepo := repository.NewStockRepository(db)
 	productRepo := repository.NewProductRepository(db)
 	eventRepo := repository.NewEventRepository(db)
-	publisher := infrastructure.NewNoOpPublisher()
+	publisher := mocks.NewNoOpPublisher()
 	stockService := service.NewStockService(stockRepo, productRepo, eventRepo, publisher)
 
 	ctx := context.Background()
@@ -272,7 +272,7 @@ func TestStockService_GetAvailability(t *testing.T) {
 	stockRepo := repository.NewStockRepository(db)
 	productRepo := repository.NewProductRepository(db)
 	eventRepo := repository.NewEventRepository(db)
-	publisher := infrastructure.NewNoOpPublisher()
+	publisher := mocks.NewNoOpPublisher()
 	stockService := service.NewStockService(stockRepo, productRepo, eventRepo, publisher)
 
 	ctx := context.Background()
@@ -322,7 +322,7 @@ func TestStockService_GetAllStockByProduct(t *testing.T) {
 	stockRepo := repository.NewStockRepository(db)
 	productRepo := repository.NewProductRepository(db)
 	eventRepo := repository.NewEventRepository(db)
-	publisher := infrastructure.NewNoOpPublisher()
+	publisher := mocks.NewNoOpPublisher()
 	stockService := service.NewStockService(stockRepo, productRepo, eventRepo, publisher)
 
 	ctx := context.Background()
@@ -386,7 +386,7 @@ func TestStockService_GetLowStockItems(t *testing.T) {
 	stockRepo := repository.NewStockRepository(db)
 	productRepo := repository.NewProductRepository(db)
 	eventRepo := repository.NewEventRepository(db)
-	publisher := infrastructure.NewNoOpPublisher()
+	publisher := mocks.NewNoOpPublisher()
 	stockService := service.NewStockService(stockRepo, productRepo, eventRepo, publisher)
 
 	ctx := context.Background()

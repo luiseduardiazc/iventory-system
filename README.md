@@ -249,10 +249,6 @@ curl http://localhost:8080/health
 ### 🎯 Para Comenzar
 
 1. **Primera vez**: Lee [run.md](docs/run.md) para configurar el entorno
-2. **Arquitectura**: Revisa [ARCHITECTURE.md](docs/ARCHITECTURE.md) para entender el diseño
-3. **Resiliencia**: Consulta [EVENT_SYNC_RESILIENCE.md](docs/EVENT_SYNC_RESILIENCE.md) para el sistema de eventos
-
----
 
 **Implementado:**
 - ✅ **EventPublisher Interface** - Abstracción para brokers intercambiables

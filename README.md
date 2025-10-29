@@ -448,10 +448,13 @@ Todos los endpoints de reservations requieren **API Key** authentication.
 |-----------|-----------|---------------|
 | **Lenguaje** | Go 1.21+ | Concurrencia nativa, performance, simplicidad |
 | **Web Framework** | Gin | Ligero, rápido, rico ecosistema de middleware |
-| **Base de Datos** | SQLite | Ligera, embebida, sin configuración, ideal para desarrollo y producción |
-| **Cache** | Redis | Alta velocidad, soporte TTL nativo |
-| **Message Broker** | Redis Streams / Kafka (futuro) | Pub/Sub en tiempo real, arquitectura desacoplada |
-| **Arquitectura** | Event-Driven + SOLID | Escalable, mantenible, testeable |
+| **Base de Datos** | SQLite | Ligera, embebida, sin configuración, persistencia de eventos (Event Sourcing) |
+| **Message Broker** | Redis Streams ✅ | Tiempo real para eventos (intercambiable con Kafka 🔜 u otro Broker) |
+| **Event Store** | SQLite (tabla `events`) | Auditoría completa, tracking de sincronización (`synced_at`) |
+| **Resiliencia** | EventSyncWorker | Re-intentos automáticos cada 10s para eventos fallidos |
+| **Patrón Arquitectónico** | Event-Driven + DIP | Publisher interface para brokers intercambiables |
+| **Concurrencia** | Goroutines + Workers | Background workers para expiración de reservas y sync de eventos |
+| **Testing** | Go testing + Mocks | 60+ tests unitarios, mocks in-memory, cobertura completa |
 
 
 ## 📋 Roadmap Futuro 

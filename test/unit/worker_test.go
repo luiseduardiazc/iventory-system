@@ -207,7 +207,8 @@ func TestEventSyncService_SyncWorker(t *testing.T) {
 	defer db.Close()
 
 	eventRepo := repository.NewEventRepository(db)
-	syncService := service.NewEventSyncService(eventRepo)
+	mockPublisher := mocks.NewMockPublisher() // ✅ Agregar MockPublisher
+	syncService := service.NewEventSyncService(eventRepo, mockPublisher)
 
 	ctx := context.Background()
 

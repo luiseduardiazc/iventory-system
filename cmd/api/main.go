@@ -64,7 +64,7 @@ func main() {
 	productService := service.NewProductService(productRepo, eventRepo)
 	stockService := service.NewStockService(stockRepo, productRepo, eventRepo, publisher)
 	reservationService := service.NewReservationService(reservationRepo, stockRepo, productRepo, eventRepo, publisher)
-	eventSyncService := service.NewEventSyncService(eventRepo)
+	eventSyncService := service.NewEventSyncService(eventRepo, publisher) // ✅ Inyectar publisher para re-intentos
 
 	// ========== Inicializar Handlers ==========
 	productHandler := handler.NewProductHandler(productService)

@@ -3,20 +3,32 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
+	"inventory-system/internal/domain"
 	"inventory-system/internal/repository"
 )
 
-// EventSyncService maneja la sincronización de eventos con message brokers
+// EventPublisher interface para publicar eventos (inyección de dependencia)
+type EventPublisher interface {
+	Publish(ctx context.Context, event *domain.Event) error
+	PublishBatch(ctx context.Context, events []*domain.Event) error
+	Close() error
+}
+
+// EventSyncService maneja la sincronización de eventos con message brokers.
+// Actúa como mecanismo de RETRY para eventos que fallaron en la publicación inicial.
 type EventSyncService struct {
 	eventRepo *repository.EventRepository
+	publisher EventPublisher // Re-intenta publicar eventos pendientes
 }
 
 // NewEventSyncService crea una nueva instancia del servicio
-func NewEventSyncService(eventRepo *repository.EventRepository) *EventSyncService {
+func NewEventSyncService(eventRepo *repository.EventRepository, publisher EventPublisher) *EventSyncService {
 	return &EventSyncService{
 		eventRepo: eventRepo,
+		publisher: publisher,
 	}
 }
 
@@ -37,29 +49,33 @@ func (s *EventSyncService) SyncPendingEvents(ctx context.Context, batchSize int)
 	}
 
 	syncedCount := 0
+	failedCount := 0
 	eventIDs := make([]string, 0, len(events))
 
+	// RE-INTENTAR publicación de eventos pendientes
 	for _, event := range events {
-		// NOTA: En producción, EventPublisher maneja la publicación a brokers.
-		// Este servicio solo gestiona el estado de sincronización en BD.
-		// Por ahora simulamos el éxito para el prototipo.
-		// Implementación de producción:
-		// err := s.publisher.Publish(ctx, event)
-		// if err != nil {
-		//     log.Printf("Error publishing event %s: %v", event.ID, err)
-		//     continue
-		// }
+		// Intenta publicar en el broker (Redis/Kafka)
+		err := s.publisher.Publish(ctx, event)
+		if err != nil {
+			log.Printf("⚠️  Failed to sync event %s: %v (will retry later)", event.ID, err)
+			failedCount++
+			continue // No marcar como sincronizado si falla
+		}
 
+		// Solo marcar como sincronizado si la publicación fue exitosa
 		eventIDs = append(eventIDs, event.ID)
 		syncedCount++
 	}
 
-	// Marcar como sincronizados
+	// Marcar como sincronizados solo los exitosos
 	if len(eventIDs) > 0 {
 		err = s.eventRepo.MarkMultipleAsSynced(ctx, eventIDs)
 		if err != nil {
 			return syncedCount, fmt.Errorf("failed to mark events as synced: %w", err)
 		}
+		log.Printf("✅ Successfully synced %d events (failed: %d)", syncedCount, failedCount)
+	} else if failedCount > 0 {
+		log.Printf("⚠️  All %d events failed to sync (will retry in next cycle)", failedCount)
 	}
 
 	return syncedCount, nil

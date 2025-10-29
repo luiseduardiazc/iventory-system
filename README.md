@@ -16,7 +16,6 @@ Prototipo de sistema de gestión de inventario distribuido que optimiza la consi
 - **SQLite Database**: Base de datos ligera y embebida para desarrollo y producción
 - **Event Sourcing**: Auditoría completa de eventos en base de datos + publicación en tiempo real
 - **Arquitectura SOLID**: Dependency Inversion Principle para escalabilidad y mantenibilidad
-- **74/74 Tests Pasando**: Cobertura completa con mocks para desarrollo sin dependencias externas
 
 ## 🏗️ Arquitectura: Event-Driven Escalable
 
@@ -70,6 +69,94 @@ El sistema utiliza una **arquitectura event-driven** con **brokers intercambiabl
   └──────────────► Auditoría
                    Event Sourcing
                    Reconstrucción de estado
+```
+
+### 🔄 Mecanismo de Resiliencia: Retry Automático
+
+El sistema implementa un **mecanismo de re-intentos automáticos** para garantizar la entrega eventual de eventos, incluso si el broker (Redis/Kafka) está temporalmente caído.
+
+**Flujo Completo:**
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│ 1. Operación de Negocio (ej: UpdateStock)                     │
+└──────────────────────┬─────────────────────────────────────────┘
+                       │
+                       ▼
+┌────────────────────────────────────────────────────────────────┐
+│ 2. Guardar Evento en DB (synced_at = NULL)                    │
+│    ✅ SIEMPRE se persiste (auditoría garantizada)              │
+└──────────────────────┬─────────────────────────────────────────┘
+                       │
+                       ▼
+┌────────────────────────────────────────────────────────────────┐
+│ 3. Publicar en Broker (Redis/Kafka)                           │
+│    ✅ Éxito  → synced_at = NOW()                               │
+│    ❌ Falla  → synced_at = NULL (queda pendiente)              │
+└──────────────────────┬─────────────────────────────────────────┘
+                       │
+                       ▼ (si falló)
+┌────────────────────────────────────────────────────────────────┐
+│ 4. EventSyncWorker (cada 10 segundos)                         │
+│    - Busca eventos con synced_at = NULL                       │
+│    - RE-INTENTA publicar en el broker                         │
+│    - Marca synced_at = NOW() si tiene éxito                   │
+│    ✅ Garantiza entrega eventual                               │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Componentes del Sistema de Resiliencia:**
+
+| Componente | Responsabilidad | Frecuencia |
+|------------|----------------|------------|
+| **StockService** | Publicación directa (tiempo real) | Por operación |
+| **ReservationService** | Publicación directa (tiempo real) | Por operación |
+| **EventSyncService** | Re-intentos de eventos fallidos | Cada 10 segundos |
+| **EventSyncWorker** | Ejecuta SyncPendingEvents() | Background (cada 10s) |
+| **EventRepository** | Persistencia + tracking de synced_at | Por evento |
+
+**Ventajas de este Diseño:**
+
+- ✅ **Auditoría garantizada**: Eventos SIEMPRE se guardan en DB, incluso si Redis cae
+- ✅ **Resiliencia automática**: Worker re-intenta publicaciones fallidas sin intervención manual
+- ✅ **Sin pérdida de datos**: Eventos pendientes se publican cuando el broker vuelve
+- ✅ **Observabilidad**: Campo `synced_at` permite monitorear eventos pendientes
+- ✅ **Idempotencia**: Re-publicar es seguro gracias a event IDs únicos
+
+**Ejemplo de Logs:**
+
+```bash
+# Publicación exitosa (tiempo real)
+✅ Event published to Redis: evt-20251028150405-001 (stock.updated)
+✅ Event synced to DB: evt-20251028150405-001
+
+# Redis caído (se guarda en DB, publicación falla)
+✅ Event saved to DB: evt-20251028150406-002 (stock.created)
+⚠️  Failed to publish to Redis: connection refused (will retry)
+
+# Worker re-intenta 10 segundos después
+📡 Event synchronization worker started
+⚠️  Failed to sync event evt-20251028150406-002: connection refused (will retry later)
+
+# Redis vuelve, evento se publica exitosamente
+✅ Successfully synced 1 events (failed: 0)
+✅ Event published to Redis: evt-20251028150406-002 (stock.created)
+```
+
+**Consultar Eventos Pendientes:**
+
+```sql
+-- Ver eventos que NO se han sincronizado con el broker
+SELECT id, event_type, aggregate_id, store_id, created_at
+FROM events
+WHERE synced_at IS NULL
+ORDER BY created_at DESC;
+
+-- Contar eventos pendientes por tipo
+SELECT event_type, COUNT(*) as pending_count
+FROM events
+WHERE synced_at IS NULL
+GROUP BY event_type;
 ```
 
 ### Cambio de Broker en 1 Línea
@@ -169,7 +256,8 @@ curl http://localhost:8080/health
 |-----------|-------------|
 | [📘 QUICKSTART.md](docs/QUICKSTART.md) | Guía rápida con ejemplos de uso de la API |
 | [🏛️ ARQUITECTURA_EVENTOS.md](ARQUITECTURA_EVENTOS.md) | Arquitectura event-driven con brokers intercambiables |
-| [📊 ANALISIS_ESCALABILIDAD.md](ANALISIS_ESCALABILIDAD.md) | Análisis de escalabilidad y decisiones arquitectónicas |
+| [� EVENT_SYNC_RESILIENCE.md](docs/EVENT_SYNC_RESILIENCE.md) | Mecanismo de resiliencia y re-intentos automáticos |
+| [�📊 ANALISIS_ESCALABILIDAD.md](ANALISIS_ESCALABILIDAD.md) | Análisis de escalabilidad y decisiones arquitectónicas |
 | [✅ REFACTORIZACION_COMPLETADA.md](REFACTORIZACION_COMPLETADA.md) | Resumen de la refactorización implementada |
 
 ---

@@ -19,8 +19,6 @@ Prototipo de sistema de gestión de inventario distribuido que optimiza la consi
 
 ## 🏗️ Arquitectura: Event-Driven Escalable
 
-### Arquitectura Actual (Octubre 2025)
-
 El sistema utiliza una **arquitectura event-driven** con **brokers intercambiables** siguiendo el **Dependency Inversion Principle**.
 
 ```
@@ -177,28 +175,18 @@ MESSAGE_BROKER=none
 
 **Beneficio Clave**: Cambiar de Redis a Kafka NO requiere modificar servicios, solo crear la implementación del publisher.
 
-Ver [ARQUITECTURA_EVENTOS.md](ARQUITECTURA_EVENTOS.md) para detalles completos.
+## 🚀 Quick Start
 
-## � Diagramas de Arquitectura
+📖 **Para instrucciones detalladas de ejecución y troubleshooting, consulta [docs/run.md](docs/run.md)**
 
-El proyecto incluye **5 diagramas profesionales** en formato Mermaid, listos para importar en [MermaidChart.com](https://www.mermaidchart.com/):
+### Inicio Rápido
 
-1. **[architecture-diagram.mmd](architecture-diagram.mmd)** - Vista general completa del sistema
-2. **[event-flow-diagram.mmd](event-flow-diagram.mmd)** - Flujos de eventos y secuencias
-3. **[layered-architecture-diagram.mmd](layered-architecture-diagram.mmd)** - Arquitectura en 7 capas
-4. **[event-publisher-class-diagram.mmd](event-publisher-class-diagram.mmd)** - Patrón de diseño Event Publisher
-5. **[deployment-diagram.mmd](deployment-diagram.mmd)** - Opciones de despliegue
-
-📖 **Ver [DIAGRAMAS.md](DIAGRAMAS.md)** para instrucciones detalladas de uso e importación.
-
-## �🚀 Quick Start
-
-### Prerrequisitos
+#### Prerrequisitos
 
 - Go 1.21+ ([Descargar aquí](https://golang.org/dl/))
-- Docker y Docker Compose (opcional, para infraestructura)
+- Docker y Docker Compose (para Redis - ver [run.md](docs/run.md))
 
-### Instalación
+#### Instalación
 
 ```bash
 # 1. Clonar repositorio
@@ -212,57 +200,31 @@ go mod download
 cp .env.example .env
 ```
 
-### Opción 1: Desarrollo con SQLite (sin dependencias)
-
-Perfecto para desarrollo local sin infraestructura externa:
-
-```bash
-# Editar .env
-DATABASE_DRIVER=sqlite
-SQLITE_PATH=:memory:
-MESSAGE_BROKER=none    # Sin broker externo
-
-# Ejecutar
-go run cmd/api/main.go
-```
-
-### Opción 2: Con Redis para eventos
+#### Redis
 
 ```bash
 # Iniciar Redis
 docker-compose up -d redis
 
-# Editar .env
-DATABASE_DRIVER=sqlite
+# Configurar .env
 MESSAGE_BROKER=redis
 
 # Ejecutar
 go run cmd/api/main.go
 ```
 
-### Verificación
+#### Verificación
 
 ```bash
 # Health check
 curl http://localhost:8080/health
-
-# Respuesta esperada:
-# {"status":"healthy","timestamp":"2025-10-26T...","store_id":"store-001"}
 ```
+
+📋 **Más comandos, ejemplos de API y solución de problemas en [docs/run.md](docs/run.md)**
 
 ## 📚 Documentación
 
-| Documento | Descripción |
-|-----------|-------------|
-| [📘 QUICKSTART.md](docs/QUICKSTART.md) | Guía rápida con ejemplos de uso de la API |
-| [🏛️ ARQUITECTURA_EVENTOS.md](ARQUITECTURA_EVENTOS.md) | Arquitectura event-driven con brokers intercambiables |
-| [� EVENT_SYNC_RESILIENCE.md](docs/EVENT_SYNC_RESILIENCE.md) | Mecanismo de resiliencia y re-intentos automáticos |
-| [�📊 ANALISIS_ESCALABILIDAD.md](ANALISIS_ESCALABILIDAD.md) | Análisis de escalabilidad y decisiones arquitectónicas |
-| [✅ REFACTORIZACION_COMPLETADA.md](REFACTORIZACION_COMPLETADA.md) | Resumen de la refactorización implementada |
 
----
-
-## ✅ Estado Actual: PRODUCCIÓN READY (v1.0.0)
 
 **Implementado:**
 - ✅ **EventPublisher Interface** - Abstracción para brokers intercambiables
@@ -274,29 +236,19 @@ curl http://localhost:8080/health
 - ✅ **Arquitectura SOLID** - Dependency Inversion Principle aplicado
 - ✅ **Compilación exitosa** - Sin errores ni warnings
 
-**Características Clave:**
-- 🔄 Cambiar de Redis a Kafka = 1 línea en .env
-- 🧪 Tests no requieren broker externo (MockPublisher)
-- 📝 Doble persistencia: DB (auditoría) + Broker (tiempo real)
-- 🚀 Escalable y mantenible
-
-**Ver detalles:** [REFACTORIZACION_COMPLETADA.md](REFACTORIZACION_COMPLETADA.md)
-
----
-
 ## 📡 API Endpoints
 
 Base URL: `http://localhost:8080/api/v1`
 
 ### 🏥 Health Check
 
-| Método | Endpoint | Descripción | Auth | Pub/Sub |
+| Método | Endpoint | Descripción | Auth | Event |
 |--------|----------|-------------|------|---------|
 | `GET` | `/health` | Estado del servidor y base de datos | No | ❌ |
 
 ### 📦 Products (Productos)
 
-| Método | Endpoint | Descripción | Auth | Pub/Sub |
+| Método | Endpoint | Descripción | Auth | Event |
 |--------|----------|-------------|------|---------|
 | `GET` | `/products` | Listar todos los productos (paginado) | No | ❌ |
 | `GET` | `/products/:id` | Obtener producto por ID | No | ❌ |
@@ -313,7 +265,7 @@ Base URL: `http://localhost:8080/api/v1`
 
 Todos los endpoints de stock requieren **API Key** authentication.
 
-| Método | Endpoint | Descripción | Pub/Sub Event |
+| Método | Endpoint | Descripción | Event |
 |--------|----------|-------------|---------------|
 | `POST` | `/stock` | Inicializar stock para producto/tienda | ✅ `stock.created` |
 | `GET` | `/stock/product/:productId` | Obtener stock de un producto en todas las tiendas | ❌ |
@@ -376,7 +328,7 @@ Todos los endpoints de stock requieren **API Key** authentication.
 
 Todos los endpoints de reservations requieren **API Key** authentication.
 
-| Método | Endpoint | Descripción | Pub/Sub Event |
+| Método | Endpoint | Descripción | Event |
 |--------|----------|-------------|---------------|
 | `POST` | `/reservations` | Crear nueva reserva | ✅ `reservation.created` |
 | `GET` | `/reservations/:id` | Obtener reserva por ID | ❌ |
@@ -446,7 +398,7 @@ Todos los endpoints de reservations requieren **API Key** authentication.
 
 ---
 
-### 📊 Resumen de Eventos Pub/Sub
+### 📊 Resumen de Eventos
 
 **Total de Endpoints**: 29  
 **Endpoints que generan eventos**: 7 (24%)
@@ -466,22 +418,6 @@ Todos los endpoints de reservations requieren **API Key** authentication.
 - **Kafka** (futuro): Topic `inventory-events`
 - **Base de datos**: Tabla `events` para auditoría
 
----
-
-## 🧪 Testing
-
-```bash
-# Todos los tests (74/74 pasando)
-go test ./... -v
-
-# Con race detector
-go test -race ./...
-
-# Con cobertura
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
-```
-
 ## 📊 Stack Tecnológico
 
 | Categoría | Tecnología | Justificación |
@@ -493,48 +429,11 @@ go tool cover -html=coverage.out
 | **Message Broker** | Redis Streams / Kafka (futuro) | Pub/Sub en tiempo real, arquitectura desacoplada |
 | **Arquitectura** | Event-Driven + SOLID | Escalable, mantenible, testeable |
 
-## 🛠️ Comandos Útiles
 
-```bash
-# Desarrollo
-go run cmd/api/main.go
-
-# Build
-go build -o bin/inventory-api.exe cmd/api/main.go
-
-# Tests (74/74 pasando)
-go test ./... -v
-
-# Con race detector
-go test -race ./...
-
-# Con cobertura
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
-```
-
-## 📋 Roadmap Futuro
-
-- [ ] Implementar KafkaPublisher para Apache Kafka  
+## 📋 Roadmap Futuro 
 - [ ] Consumer de eventos (microservicio separado)
 - [ ] Métricas de publicación (Prometheus)
 - [ ] WebSockets para notificaciones en tiempo real
 - [ ] Event sourcing completo con replay
 - [ ] Dashboard de monitoreo (Grafana)
-
-## 🤝 Contribuir
-
-Ver [ARQUITECTURA_EVENTOS.md](ARQUITECTURA_EVENTOS.md) para entender la arquitectura antes de contribuir.
-
-## 📝 Licencia
-
-MIT License - Ver archivo LICENSE para detalles
-
-## 👨‍💻 Autor
-
-Sistema de Inventario Distribuido - Arquitectura Event-Driven Escalable
-
----
-
-**Estado**: ✅ **PRODUCCIÓN READY** - v1.0.0 (Octubre 2025)
 

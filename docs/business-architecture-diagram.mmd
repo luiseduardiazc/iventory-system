@@ -1,0 +1,45 @@
+---
+title: Sistema de Inventario - Vista de Negocio Simplificada
+---
+graph LR
+    %% Usuarios
+    USERS["👥 USUARIOS<br/>━━━━━━━━━━<br/>Web App<br/>Mobile App<br/>Sistemas Externos"]
+    
+    %% Núcleo del Sistema
+    CORE["💼 SISTEMA DE INVENTARIO<br/>━━━━━━━━━━━━━━━━━━━━━━<br/><br/>📦 <b>Gestión de Productos</b><br/>   • Crear y actualizar productos<br/>   • Búsqueda por SKU<br/><br/>📊 <b>Control de Stock</b><br/>   • Actualización en tiempo real<br/>   • Transferencias entre tiendas<br/>   • Prevención de overselling<br/><br/>🎫 <b>Sistema de Reservas</b><br/>   • Bloqueo temporal de stock<br/>   • Confirmación de ventas<br/>   • Liberación automática (TTL)"]
+    
+    %% Base de Datos
+    DB[("💾 BASE DE DATOS<br/>━━━━━━━━━━<br/>Stock por tienda<br/>Historial completo<br/>Auditoría total")]
+    
+    %% Sistema de Eventos
+    EVENTS["📡 EVENTOS EN TIEMPO REAL<br/>━━━━━━━━━━━━━━━━━━━━<br/><br/>✓ Notificaciones instantáneas<br/>✓ Integración con otros sistemas<br/>✓ Dashboard analítico<br/>✓ Alertas automáticas<br/><br/>🛡️ <b>Sistema de Resiliencia</b><br/>   • Re-intentos automáticos<br/>   • Sin pérdida de datos<br/>   • Recuperación ante fallos"]
+    
+    %% Procesos Automáticos
+    AUTO["⚙️ PROCESOS AUTOMÁTICOS<br/>━━━━━━━━━━━━━━━━━<br/><br/>⏰ Monitor de Expiración<br/>   Libera reservas vencidas<br/><br/>🔄 Sistema de Recuperación<br/>   Garantiza entrega de eventos"]
+    
+    %% Sistemas Externos
+    EXT["🔌 INTEGRACIÓN<br/>━━━━━━━━━━<br/>Dashboard<br/>Notificaciones<br/>ERP<br/>Analytics"]
+    
+    %% Conexiones
+    USERS -->|"Solicitudes API"| CORE
+    CORE -->|"Guarda datos"| DB
+    CORE -->|"Publica eventos"| EVENTS
+    DB -->|"Consulta historial"| AUTO
+    AUTO -->|"Ejecuta acciones"| CORE
+    AUTO -->|"Genera eventos"| EVENTS
+    EVENTS -.->|"Stream de datos"| EXT
+    
+    %% Estilos
+    classDef users fill:#E3F2FD,stroke:#1976D2,stroke-width:4px,color:#000
+    classDef core fill:#E8F5E9,stroke:#388E3C,stroke-width:4px,color:#000
+    classDef data fill:#FCE4EC,stroke:#C2185B,stroke-width:4px,color:#000
+    classDef events fill:#FFF3E0,stroke:#F57C00,stroke-width:4px,color:#000
+    classDef auto fill:#FFEBEE,stroke:#D32F2F,stroke-width:4px,color:#000
+    classDef external fill:#F1F8E9,stroke:#689F38,stroke-width:3px,color:#000,stroke-dasharray: 5 5
+    
+    class USERS users
+    class CORE core
+    class DB data
+    class EVENTS events
+    class AUTO auto
+    class EXT external

@@ -1,167 +1,171 @@
+---
+title: Sistema de Gestión de Inventario - Arquitectura Empresarial
+---
 graph TB
-    subgraph "Client Layer"
-        CLI[Client Applications]
-        CURL[cURL / HTTP Clients]
-        UI[Web/Mobile UI]
+    %% ============================================
+    %% CAPA DE USUARIOS Y CLIENTES
+    %% ============================================
+    subgraph USERS["👥 USUARIOS"]
+        WEB["🌐 Aplicación Web<br/>Dashboard de Gestión"]
+        MOBILE["📱 App Móvil<br/>Ventas en Tienda"]
+        API_CLIENT["🔌 Sistemas Externos<br/>ERP, Ecommerce"]
     end
 
-    subgraph "API Gateway Layer"
-        GIN[Gin HTTP Server<br/>:8080]
+    %% ============================================
+    %% CAPA DE API (PUNTO DE ENTRADA)
+    %% ============================================
+    subgraph API["🚪 API REST"]
+        GATEWAY["Puerto 8080<br/>Seguridad con API Keys<br/>Rate Limiting"]
     end
 
-    subgraph "Middleware Layer"
-        AUTH[Authentication<br/>API Key Validation]
-        LOGGER[Request Logger<br/>JSON/Text Format]
-        RATE[Rate Limiter<br/>100 req/min]
-        CORS[CORS Handler]
-        ERROR[Error Handler]
-    end
-
-    subgraph "Handler Layer"
-        PH[Product Handler<br/>CRUD Operations]
-        SH[Stock Handler<br/>Stock Management]
-        RH[Reservation Handler<br/>Reserve/Confirm/Cancel]
-        HEALTH[Health Check Handler]
-    end
-
-    subgraph "Service Layer"
-        PS[Product Service<br/>Business Logic]
-        SS[Stock Service<br/>Optimistic Locking]
-        RS[Reservation Service<br/>TTL Management]
-        SYNC[Sync Service<br/>Event Processing]
-    end
-
-    subgraph "Event Publishing"
-        EP[EventPublisher<br/>Interface]
+    %% ============================================
+    %% FUNCIONALIDADES DE NEGOCIO
+    %% ============================================
+    subgraph BUSINESS["💼 FUNCIONALIDADES DE NEGOCIO"]
+        direction TB
         
-        subgraph "Implementations"
-            REDIS_PUB[Redis Publisher<br/>✅ Implemented]
-            KAFKA_PUB[Kafka Publisher<br/>🔜 Planned]
-            MOCK_PUB[Mock Publisher<br/>✅ Testing]
-            NOOP_PUB[NoOp Publisher<br/>✅ Development]
+        subgraph PRODUCTS["📦 Gestión de Productos"]
+            PROD_CREATE["✨ Crear Productos"]
+            PROD_UPDATE["✏️ Actualizar Info"]
+            PROD_SEARCH["🔍 Búsqueda por SKU"]
+        end
+        
+        subgraph INVENTORY["📊 Control de Inventario"]
+            INV_UPDATE["📈 Actualizar Stock<br/><i>Previene Overselling</i>"]
+            INV_TRANSFER["🔄 Transferir entre Tiendas<br/><i>Optimización Logística</i>"]
+            INV_CHECK["✓ Verificar Disponibilidad<br/><i>Consulta en Tiempo Real</i>"]
+        end
+        
+        subgraph RESERVATIONS["🎫 Sistema de Reservas"]
+            RES_CREATE["🔒 Reservar Stock<br/><i>Bloqueo Temporal</i>"]
+            RES_CONFIRM["✅ Confirmar Venta<br/><i>Completar Transacción</i>"]
+            RES_CANCEL["❌ Cancelar/Liberar<br/><i>Devolver al Inventario</i>"]
+            RES_AUTO["⏰ Auto-Expiración<br/><i>Liberación Automática TTL</i>"]
         end
     end
 
-    subgraph "Repository Layer"
-        PR[Product Repository<br/>CRUD + Search]
-        SR[Stock Repository<br/>Version Control]
-        RR[Reservation Repository<br/>Status Management]
-        ER[Event Repository<br/>Event Sourcing]
-    end
-
-    subgraph "Data Layer"
-        SQLITE[(SQLite Database<br/>./inventory.db)]
+    %% ============================================
+    %% SISTEMA DE EVENTOS (CORAZÓN DEL SISTEMA)
+    %% ============================================
+    subgraph EVENTS["📡 SISTEMA DE EVENTOS EN TIEMPO REAL"]
+        direction LR
         
-        subgraph "Tables"
-            T_PROD[products]
-            T_STOCK[stock]
-            T_RESERV[reservations]
-            T_EVENTS[events]
+        EVENT_BUS["🚀 Bus de Eventos<br/><b>Redis Streams</b><br/><i>100k eventos/stream</i>"]
+        
+        subgraph EVENT_TYPES["Tipos de Eventos Publicados"]
+            E1["stock.created<br/>stock.updated<br/>stock.transferred"]
+            E2["reservation.created<br/>reservation.confirmed<br/>reservation.cancelled"]
         end
+        
+        RESILIENCE["🛡️ MECANISMO DE RESILIENCIA<br/><b>Re-intentos Automáticos</b><br/>✓ Sin pérdida de datos<br/>✓ Retry cada 10s si falla<br/>✓ Auditoría completa"]
     end
 
-    subgraph "Message Broker Layer"
-        REDIS[Redis Streams<br/>localhost:6379<br/>stream: inventory-events]
-        KAFKA[Apache Kafka<br/>🔜 Future]
+    %% ============================================
+    %% BASE DE DATOS
+    %% ============================================
+    subgraph DATA["💾 ALMACENAMIENTO PERSISTENTE"]
+        DB[("📚 Base de Datos SQLite<br/><b>inventory.db</b><br/>━━━━━━━━━━━━<br/>✓ Productos<br/>✓ Stock por Tienda<br/>✓ Reservas Activas<br/>✓ Historial de Eventos")]
     end
 
-    subgraph "Background Workers"
-        EXP_WORKER[Expiration Worker<br/>Auto-cancel TTL expired<br/>reservations]
-        SYNC_WORKER[Sync Worker<br/>Process events from DB<br/>to ensure consistency]
+    %% ============================================
+    %% PROCESOS AUTOMÁTICOS
+    %% ============================================
+    subgraph WORKERS["⚙️ PROCESOS AUTOMÁTICOS EN SEGUNDO PLANO"]
+        direction TB
+        
+        WORKER1["⏰ <b>Monitor de Expiración</b><br/>Ejecuta: Cada 1 minuto<br/>━━━━━━━━━━━━<br/>Cancela reservas vencidas<br/>Libera stock automáticamente<br/>Publica eventos de expiración"]
+        
+        WORKER2["🔄 <b>Sistema de Recuperación</b><br/>Ejecuta: Cada 10 segundos<br/>━━━━━━━━━━━━<br/>Re-intenta eventos fallidos<br/>Garantiza entrega eventual<br/>Monitorea salud del sistema"]
     end
 
-    subgraph "Infrastructure"
-        DOCKER[Docker Compose<br/>Redis Container]
-        CONFIG[Config Loader<br/>Environment Variables<br/>.env file]
+    %% ============================================
+    %% CARACTERÍSTICAS TÉCNICAS
+    %% ============================================
+    subgraph FEATURES["⚡ CARACTERÍSTICAS TÉCNICAS CLAVE"]
+        direction LR
+        
+        F1["🔐 Optimistic Locking<br/><i>Previene condiciones de carrera</i><br/><i>Múltiples usuarios simultáneos</i>"]
+        F2["📝 Event Sourcing<br/><i>Auditoría completa de cambios</i><br/><i>Trazabilidad total</i>"]
+        F3["🎯 Arquitectura Desacoplada<br/><i>Cambiar Redis por Kafka</i><br/><i>Sin modificar código de negocio</i>"]
     end
 
-    %% Client to API
-    CLI --> GIN
-    CURL --> GIN
-    UI --> GIN
+    %% ============================================
+    %% CONSUMIDORES DE EVENTOS (FUTURO)
+    %% ============================================
+    subgraph CONSUMERS["🔌 SISTEMAS QUE PUEDEN CONSUMIR EVENTOS"]
+        direction TB
+        
+        C1["📊 <b>Dashboard Analítico</b><br/>Reportes en tiempo real<br/>KPIs de negocio"]
+        C2["📧 <b>Sistema de Notificaciones</b><br/>Alertas de stock bajo<br/>Confirmaciones de venta"]
+        C3["🔗 <b>Integración ERP</b><br/>Sincronización automática<br/>Contabilidad en tiempo real"]
+    end
 
-    %% API to Middleware
-    GIN --> AUTH
-    AUTH --> LOGGER
-    LOGGER --> RATE
-    RATE --> CORS
-    CORS --> ERROR
+    %% ============================================
+    %% CONEXIONES PRINCIPALES
+    %% ============================================
+    
+    %% Usuarios a API
+    WEB --> GATEWAY
+    MOBILE --> GATEWAY
+    API_CLIENT --> GATEWAY
+    
+    %% API a Funcionalidades
+    GATEWAY --> PRODUCTS
+    GATEWAY --> INVENTORY
+    GATEWAY --> RESERVATIONS
+    
+    %% Funcionalidades a Base de Datos
+    PRODUCTS --> DATA
+    INVENTORY --> DATA
+    RESERVATIONS --> DATA
+    
+    %% Funcionalidades a Sistema de Eventos
+    INVENTORY -->|"Publica eventos<br/>en tiempo real"| EVENT_BUS
+    RESERVATIONS -->|"Publica eventos<br/>en tiempo real"| EVENT_BUS
+    
+    %% Sistema de Eventos
+    EVENT_BUS --> EVENT_TYPES
+    EVENT_BUS <--> RESILIENCE
+    
+    %% Resiliencia a BD (para retry)
+    RESILIENCE <-->|"Consulta eventos<br/>pendientes"| DATA
+    
+    %% Workers
+    WORKER1 -->|"Monitorea"| RESERVATIONS
+    WORKER1 -->|"Publica eventos"| EVENT_BUS
+    
+    WORKER2 -->|"Re-intenta"| RESILIENCE
+    WORKER2 -->|"Lee pendientes"| DATA
+    
+    %% Consumidores de Eventos
+    EVENT_BUS -.->|"Stream de eventos"| CONSUMERS
+    
+    %% Características técnicas vinculadas
+    INVENTORY -.-> F1
+    DATA -.-> F2
+    EVENT_BUS -.-> F3
 
-    %% Middleware to Handlers
-    ERROR --> PH
-    ERROR --> SH
-    ERROR --> RH
-    ERROR --> HEALTH
+    %% ============================================
+    %% ESTILOS Y COLORES
+    %% ============================================
+    
+    classDef userLayer fill:#E3F2FD,stroke:#1976D2,stroke-width:3px,color:#000
+    classDef apiLayer fill:#F3E5F5,stroke:#7B1FA2,stroke-width:3px,color:#000
+    classDef businessLayer fill:#E8F5E9,stroke:#388E3C,stroke-width:3px,color:#000
+    classDef eventLayer fill:#FFF3E0,stroke:#F57C00,stroke-width:3px,color:#000
+    classDef dataLayer fill:#FCE4EC,stroke:#C2185B,stroke-width:3px,color:#000
+    classDef workerLayer fill:#FFEBEE,stroke:#D32F2F,stroke-width:3px,color:#000
+    classDef featureLayer fill:#E0F2F1,stroke:#00796B,stroke-width:2px,color:#000
+    classDef consumerLayer fill:#F1F8E9,stroke:#689F38,stroke-width:2px,color:#000,stroke-dasharray: 5 5
+    classDef resilience fill:#FF6B6B,stroke:#C92A2A,stroke-width:4px,color:#fff
+    
+    class WEB,MOBILE,API_CLIENT userLayer
+    class GATEWAY apiLayer
+    class PRODUCTS,INVENTORY,RESERVATIONS,PROD_CREATE,PROD_UPDATE,PROD_SEARCH,INV_UPDATE,INV_TRANSFER,INV_CHECK,RES_CREATE,RES_CONFIRM,RES_CANCEL,RES_AUTO businessLayer
+    class EVENT_BUS,EVENT_TYPES,E1,E2 eventLayer
+    class DB dataLayer
+    class WORKER1,WORKER2 workerLayer
+    class F1,F2,F3 featureLayer
+    class C1,C2,C3 consumerLayer
+    class RESILIENCE resilience
 
-    %% Handlers to Services
-    PH --> PS
-    SH --> SS
-    RH --> RS
-    HEALTH --> PS
-    HEALTH --> SS
-
-    %% Services to Repositories
-    PS --> PR
-    SS --> SR
-    SS --> RR
-    RS --> RR
-    RS --> SR
-
-    %% Services to Event Publisher
-    PS --> EP
-    SS --> EP
-    RS --> EP
-
-    %% Event Publisher to Implementations
-    EP -.-> REDIS_PUB
-    EP -.-> KAFKA_PUB
-    EP -.-> MOCK_PUB
-    EP -.-> NOOP_PUB
-
-    %% Event Publisher to Message Brokers
-    REDIS_PUB --> REDIS
-    KAFKA_PUB -.-> KAFKA
-
-    %% Services to Event Repository
-    PS --> ER
-    SS --> ER
-    RS --> ER
-
-    %% Repositories to Database
-    PR --> SQLITE
-    SR --> SQLITE
-    RR --> SQLITE
-    ER --> SQLITE
-
-    %% Database Tables
-    SQLITE --> T_PROD
-    SQLITE --> T_STOCK
-    SQLITE --> T_RESERV
-    SQLITE --> T_EVENTS
-
-    %% Background Workers
-    EXP_WORKER --> RR
-    EXP_WORKER --> EP
-    SYNC_WORKER --> ER
-    SYNC_WORKER --> EP
-
-    %% Infrastructure
-    CONFIG --> GIN
-    DOCKER --> REDIS
-
-    %% Sync Service
-    SYNC --> ER
-    SYNC --> EP
-
-    %% Styling
-    classDef implemented fill:#90EE90,stroke:#006400,stroke-width:2px
-    classDef planned fill:#FFD700,stroke:#FF8C00,stroke-width:2px
-    classDef infrastructure fill:#87CEEB,stroke:#4682B4,stroke-width:2px
-    classDef database fill:#DDA0DD,stroke:#8B008B,stroke-width:2px
-    classDef worker fill:#FFA07A,stroke:#DC143C,stroke-width:2px
-
-    class REDIS_PUB,MOCK_PUB,NOOP_PUB,REDIS implemented
-    class KAFKA_PUB,KAFKA planned
-    class DOCKER,CONFIG infrastructure
-    class SQLITE,T_PROD,T_STOCK,T_RESERV,T_EVENTS database
-    class EXP_WORKER,SYNC_WORKER worker

@@ -1,0 +1,84 @@
+---
+title: Flujo de Valor - Venta de Producto
+---
+graph TB
+    START(["🛒 INICIO: Cliente quiere comprar"])
+    
+    %% Paso 1: Verificación
+    STEP1["📋 PASO 1: Verificar Disponibilidad<br/>━━━━━━━━━━━━━━━━━━━━━<br/>Sistema consulta stock en tiempo real<br/>✓ Stock disponible en tienda local<br/>✓ Respuesta instantánea"]
+    
+    %% Decisión 1
+    CHECK1{¿Stock<br/>disponible?}
+    
+    NO_STOCK["❌ SIN STOCK<br/>━━━━━━━━━<br/>• Notificar al cliente<br/>• Sugerir tiendas cercanas<br/>• Opción de reservar en otra tienda"]
+    
+    %% Paso 2: Reserva
+    STEP2["🔒 PASO 2: Crear Reserva<br/>━━━━━━━━━━━━━━━━━━━━━<br/>Bloqueo temporal del producto<br/>✓ Stock reservado por 30 minutos<br/>✓ Previene doble venta<br/>✓ Evento publicado en tiempo real"]
+    
+    %% Paso 3: Proceso de Venta
+    STEP3["💳 PASO 3: Procesar Pago<br/>━━━━━━━━━━━━━━━━━━━━━<br/>Cliente procede con la compra<br/>Tiempo límite: 30 minutos"]
+    
+    %% Decisión 2
+    CHECK2{¿Pago<br/>exitoso?}
+    
+    %% Cancelación
+    CANCEL["❌ CANCELAR RESERVA<br/>━━━━━━━━━━━━━━━<br/>Stock liberado automáticamente<br/>✓ Disponible para otros clientes<br/>✓ Evento de cancelación publicado"]
+    
+    %% Expiración
+    EXPIRE["⏰ EXPIRACIÓN AUTOMÁTICA<br/>━━━━━━━━━━━━━━━━━━━<br/>Reserva vencida (30 min)<br/>✓ Stock liberado automáticamente<br/>✓ Sin intervención manual<br/>✓ Evento de expiración publicado"]
+    
+    %% Confirmación
+    STEP4["✅ PASO 4: Confirmar Venta<br/>━━━━━━━━━━━━━━━━━━━━━<br/>Venta completada exitosamente<br/>✓ Stock actualizado permanentemente<br/>✓ Reserva convertida en venta<br/>✓ Evento de confirmación publicado"]
+    
+    %% Paso 5: Notificaciones
+    STEP5["📡 PASO 5: Notificaciones Automáticas<br/>━━━━━━━━━━━━━━━━━━━━━━━━━━━<br/>✓ Dashboard actualizado en tiempo real<br/>✓ Alerta si stock bajo umbral<br/>✓ Sincronización con ERP<br/>✓ Métricas de ventas actualizadas"]
+    
+    END(["🎉 FIN: Venta Completada"])
+    END_CANCEL(["↩️ FIN: Reserva Cancelada"])
+    
+    %% Flujo Principal
+    START --> STEP1
+    STEP1 --> CHECK1
+    
+    CHECK1 -->|"✅ SÍ"| STEP2
+    CHECK1 -->|"❌ NO"| NO_STOCK
+    
+    STEP2 --> STEP3
+    STEP3 --> CHECK2
+    
+    CHECK2 -->|"✅ SÍ"| STEP4
+    CHECK2 -->|"❌ NO"| CANCEL
+    
+    STEP3 -.->|"⏱️ Timeout 30min"| EXPIRE
+    
+    STEP4 --> STEP5
+    STEP5 --> END
+    
+    CANCEL --> END_CANCEL
+    EXPIRE --> END_CANCEL
+    
+    %% Notas laterales
+    NOTE1["💡 VALOR DE NEGOCIO<br/>━━━━━━━━━━━━━━<br/>• Previene overselling<br/>• Experiencia de usuario fluida<br/>• Datos en tiempo real<br/>• Integración automática"]
+    
+    NOTE2["🛡️ CONFIABILIDAD<br/>━━━━━━━━━━━━━━<br/>• Re-intentos automáticos<br/>• Sin pérdida de eventos<br/>• Auditoría completa<br/>• Trazabilidad total"]
+    
+    STEP2 -.->|"Beneficio"| NOTE1
+    STEP5 -.->|"Garantía"| NOTE2
+    
+    %% Estilos
+    classDef start fill:#4CAF50,stroke:#2E7D32,stroke-width:4px,color:#fff
+    classDef process fill:#2196F3,stroke:#1565C0,stroke-width:3px,color:#fff
+    classDef decision fill:#FF9800,stroke:#E65100,stroke-width:3px,color:#fff
+    classDef success fill:#4CAF50,stroke:#2E7D32,stroke-width:3px,color:#fff
+    classDef error fill:#F44336,stroke:#C62828,stroke-width:3px,color:#fff
+    classDef notification fill:#9C27B0,stroke:#6A1B9A,stroke-width:3px,color:#fff
+    classDef note fill:#FFE082,stroke:#F57C00,stroke-width:2px,color:#000
+    classDef end fill:#4CAF50,stroke:#2E7D32,stroke-width:4px,color:#fff
+    
+    class START start
+    class STEP1,STEP2,STEP3,STEP4 process
+    class CHECK1,CHECK2 decision
+    class CANCEL,NO_STOCK,EXPIRE error
+    class STEP5 notification
+    class NOTE1,NOTE2 note
+    class END,END_CANCEL end

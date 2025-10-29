@@ -1,0 +1,110 @@
+---
+title: Event Publishing Resilience Flow
+---
+sequenceDiagram
+    participant Client
+    participant StockService
+    participant EventRepo
+    participant EventPublisher
+    participant Redis
+    participant EventSyncWorker
+    participant EventSyncService
+
+    Note over Client,Redis: SCENARIO 1: Successful Publish (Happy Path)
+    
+    Client->>StockService: UpdateStock(product-123, +50)
+    activate StockService
+    
+    StockService->>EventRepo: Save Event<br/>(synced_at = NULL)
+    EventRepo-->>StockService: ✅ Event Saved
+    
+    StockService->>EventPublisher: Publish(stock.updated)
+    activate EventPublisher
+    EventPublisher->>Redis: XADD inventory-events
+    Redis-->>EventPublisher: ✅ Published
+    deactivate EventPublisher
+    
+    StockService->>EventRepo: MarkAsSynced(event-123)<br/>(synced_at = NOW)
+    EventRepo-->>StockService: ✅ Marked
+    
+    StockService-->>Client: ✅ Stock Updated
+    deactivate StockService
+    
+    Note over Client,EventSyncService: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    Note over Client,Redis: SCENARIO 2: Failed Publish + Retry (Resilience)
+    
+    Client->>StockService: CreateReservation(qty=10)
+    activate StockService
+    
+    StockService->>EventRepo: Save Event<br/>(synced_at = NULL)
+    EventRepo-->>StockService: ✅ Event Saved
+    
+    StockService->>EventPublisher: Publish(reservation.created)
+    activate EventPublisher
+    EventPublisher->>Redis: XADD inventory-events
+    Redis-->>EventPublisher: ❌ Connection Refused
+    deactivate EventPublisher
+    
+    Note over StockService: Event stays pending<br/>(synced_at = NULL)
+    
+    StockService-->>Client: ⚠️ Stock Updated<br/>(Event will retry)
+    deactivate StockService
+    
+    Note over EventSyncWorker: Wait 10 seconds...
+    
+    EventSyncWorker->>EventSyncService: Tick (every 10s)
+    activate EventSyncService
+    
+    EventSyncService->>EventRepo: GetPendingEvents()<br/>(WHERE synced_at IS NULL)
+    EventRepo-->>EventSyncService: [event-456]
+    
+    loop For each pending event
+        EventSyncService->>EventPublisher: Publish(event-456)
+        activate EventPublisher
+        
+        alt Redis is back online
+            EventPublisher->>Redis: XADD inventory-events
+            Redis-->>EventPublisher: ✅ Published
+            EventSyncService->>EventRepo: MarkAsSynced(event-456)<br/>(synced_at = NOW)
+            Note over EventSyncService: ✅ Successfully synced
+        else Redis still down
+            EventPublisher->>Redis: XADD inventory-events
+            Redis-->>EventPublisher: ❌ Still down
+            Note over EventSyncService: ⚠️ Will retry in next cycle
+        end
+        
+        deactivate EventPublisher
+    end
+    
+    deactivate EventSyncService
+    
+    Note over Client,EventSyncService: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    Note over Client,Redis: SCENARIO 3: Partial Failure (2 events, 1 fails)
+    
+    EventSyncWorker->>EventSyncService: Tick (every 10s)
+    activate EventSyncService
+    
+    EventSyncService->>EventRepo: GetPendingEvents(batch=100)
+    EventRepo-->>EventSyncService: [event-A, event-B]
+    
+    EventSyncService->>EventPublisher: Publish(event-A)
+    activate EventPublisher
+    EventPublisher->>Redis: XADD
+    Redis-->>EventPublisher: ✅ Success
+    deactivate EventPublisher
+    EventSyncService->>EventRepo: MarkAsSynced(event-A)
+    Note over EventSyncService: ✅ event-A synced
+    
+    EventSyncService->>EventPublisher: Publish(event-B)
+    activate EventPublisher
+    EventPublisher->>Redis: XADD
+    Redis-->>EventPublisher: ❌ Timeout
+    deactivate EventPublisher
+    Note over EventSyncService: ⚠️ event-B stays pending
+    
+    EventSyncService-->>EventSyncWorker: Synced: 1, Failed: 1
+    deactivate EventSyncService
+    
+    Note over EventRepo: event-A: synced_at = NOW<br/>event-B: synced_at = NULL

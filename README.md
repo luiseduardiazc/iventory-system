@@ -457,7 +457,5 @@ Todos los endpoints de reservations requieren **API Key** authentication.
 ## 📋 Roadmap Futuro 
 - [ ] Consumer de eventos (microservicio separado)
 - [ ] Métricas de publicación (Prometheus)
-- [ ] WebSockets para notificaciones en tiempo real
-- [ ] Event sourcing completo con replay
 - [ ] Dashboard de monitoreo (Grafana)
 

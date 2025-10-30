@@ -140,22 +140,6 @@ El sistema implementa un **mecanismo de re-intentos automáticos** para garantiz
 ✅ Event published to Redis: evt-20251028150406-002 (stock.created)
 ```
 
-**Consultar Eventos Pendientes:**
-
-```sql
--- Ver eventos que NO se han sincronizado con el broker
-SELECT id, event_type, aggregate_id, store_id, created_at
-FROM events
-WHERE synced_at IS NULL
-ORDER BY created_at DESC;
-
--- Contar eventos pendientes por tipo
-SELECT event_type, COUNT(*) as pending_count
-FROM events
-WHERE synced_at IS NULL
-GROUP BY event_type;
-```
-
 ### Cambio de Broker en 1 Línea
 
 ```bash

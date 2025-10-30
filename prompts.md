@@ -370,18 +370,15 @@ Los prompts más efectivos son aquellos que:
 
 Este proyecto demuestra que la **IA generativa es un acelerador poderoso**, pero no elimina la necesidad de:
 
-1. **Conocimiento Técnico Profundo**
+1. **Conocimiento Técnico **
    - La IA generó código, pero yo decidí la arquitectura event-driven
-   - Elegí DIP, Event Sourcing y optimistic locking basado en experiencia
-   - Validé cada línea de código generado contra best practices
 
 2. **Pensamiento Crítico**
    - La IA propuso soluciones, yo evalué trade-offs
    - Detecté cuando el código generado tenía acoplamiento innecesario
-   - Refiné prompts basándome en conocimiento del dominio
+   - Refiné prompts basándome en experiencias previas
 
 3. **Visión Arquitectónica**
-   - La IA no sugirió el sistema de resiliencia, yo lo diseñé
    - Identifiqué la necesidad de retry automático por experiencia
    - Planifiqué la extensibilidad (Redis → Kafka) anticipando evolución
 
@@ -416,58 +413,3 @@ Este proyecto demuestra que la **IA generativa es un acelerador poderoso**, pero
    ↓
 7. YO ajusto para audiencia correcta
 ```
-
-**Clave**: Iteración constante entre humano (decisión) e IA (ejecución)
-
-### Números Reales
-
-| Actividad | Sin IA | Con IA | Ahorro |
-|-----------|--------|--------|--------|
-| Escribir 3,000 líneas de código | 40h | 15h | **63%** |
-| Crear 60 tests unitarios | 20h | 6h | **70%** |
-| Documentar (8 docs + 5 diagramas) | 25h | 8h | **68%** |
-| Refactoring completo | 15h | 4h | **73%** |
-| **TOTAL** | **100h** | **33h** | **67%** |
-
-**Pero**: Las 33 horas fueron de **alta concentración**:
-- Diseño arquitectónico
-- Validación de código
-- Refinamiento de prompts
-- Testing y debugging
-
-### Lecciones para Futuros Proyectos
-
-1. **Invierte tiempo en arquitectura primero**
-   - Un buen diseño hace que los prompts sean más efectivos
-   - La IA ejecuta bien cuando las instrucciones son precisas
-
-2. **Genera tests inmediatamente**
-   - Los tests generados por IA son un safety net
-   - Permiten refactorizar con confianza
-
-3. **Documenta para diferentes audiencias**
-   - La IA puede generar múltiples versiones del mismo contenido
-   - Útil para stakeholders técnicos y de negocio
-
-4. **Valida siempre**
-   - 10-15% del código generado requiere ajustes
-   - Los edge cases rara vez están cubiertos inicialmente
-
-### Conclusión Personal
-
-> 🎓 **La IA no reemplaza al desarrollador senior, lo multiplica.**
->
-> - **Sin conocimiento técnico**: La IA genera código mediocre
-> - **Con conocimiento técnico**: La IA genera código profesional 3x más rápido
->
-> La diferencia está en:
-> - ✅ Qué prompts hacer (experiencia)
-> - ✅ Qué validar (criterio)
-> - ✅ Qué rechazar (estándares)
-> - ✅ Qué mejorar (visión)
-
-**El futuro no es "IA vs Humanos", es "Humanos + IA" trabajando en simbiosis.**
-
----
-
-**Última actualización**: 29 de octubre de 2025

@@ -439,6 +439,42 @@ Todos los endpoints de reservations requieren **API Key** authentication.
 | **Concurrencia** | Goroutines + Workers | Background workers para expiración de reservas y sync de eventos |
 | **Testing** | Go testing + Mocks | 60+ tests unitarios, mocks in-memory, cobertura completa |
 
+## 🤖 Uso de IA en el Desarrollo
+
+Este proyecto fue desarrollado con asistencia de **IA generativa** (GitHub Copilot/Claude) para acelerar el desarrollo y mejorar la calidad del código.
+
+### 🎯 Cómo se Usó la IA
+
+| Fase | Uso de IA | Resultado |
+|------|-----------|-----------|
+| **Arquitectura** | Diseño del patrón event-driven y estructura SOLID | Arquitectura escalable y mantenible |
+| **Código** | Generación de servicios, repositories y handlers | 3,000+ líneas de código estructurado |
+| **Tests** | Creación de 60+ tests unitarios con mocks | Cobertura completa sin errores |
+| **Documentación** | Generación de README, guías y diagramas | 8 documentos + 5 diagramas Mermaid |
+| **Refactoring** | Migración a EventPublisher interface | Sin regresiones, 74/74 tests pasando |
+
+### ✅ Ventajas Obtenidas
+
+- ⚡ **Velocidad**: Desarrollo 3-4x más rápido que métodos tradicionales
+- 🎯 **Consistencia**: Código uniforme siguiendo patrones establecidos
+- 📚 **Documentación**: Generación automática de guías técnicas y de negocio
+- 🧪 **Calidad**: Tests generados automáticamente con casos edge incluidos
+- 🔄 **Iteración Rápida**: Refactorización segura con validación inmediata
+
+### 🛠️ Herramientas IA Utilizadas
+
+- **GitHub Copilot**: Autocompletado inteligente de código
+- **Claude AI**: Arquitectura, diseño de patrones, documentación
+- **Generación de Tests**: Casos de prueba con mocks y fixtures
+
+### 💡 Lecciones Aprendidas
+
+1. **La IA acelera, pero el humano valida**: Cada sugerencia fue revisada y adaptada
+2. **Mejor para código estructurado**: Excelente en servicios, repos, handlers; menos en lógica compleja
+3. **Documentación de calidad**: Diagramas y guías comprensibles para todos los niveles
+4. **Refactoring seguro**: Con tests generados, los cambios arquitectónicos son menos riesgosos
+
+> 🎓 **Conclusión**: La IA es una **herramienta de productividad**, no un reemplazo. El conocimiento técnico sigue siendo fundamental para guiar las decisiones arquitectónicas y validar el código generado.
 
 ## 📋 Roadmap Futuro 
 - [ ] Consumer de eventos (microservicio separado)

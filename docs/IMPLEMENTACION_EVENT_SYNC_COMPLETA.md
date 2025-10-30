@@ -268,27 +268,6 @@ Warnings: 0
 Errors: 0
 ```
 
----
-
-## 🎯 Próximos Pasos Sugeridos
-
-### Corto Plazo
-- [ ] Configurar intervalo de worker via env var (`EVENT_SYNC_INTERVAL`)
-- [ ] Agregar métricas de Prometheus
-- [ ] Dashboard de Grafana para visualizar eventos pendientes
-
-### Mediano Plazo
-- [ ] Dead Letter Queue para eventos fallidos >10 veces
-- [ ] Circuit Breaker para evitar reintentos innecesarios
-- [ ] Compresión de eventos en batch publishing
-
-### Largo Plazo
-- [ ] Priorización de eventos (críticos vs. no críticos)
-- [ ] Event sourcing completo con replay capability
-- [ ] Sharding de eventos por store_id para escalabilidad horizontal
-
----
-
 ## 📚 Referencias de Documentación
 
 | Documento | Ubicación | Descripción |
